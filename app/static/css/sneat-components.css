@@ -74,14 +74,55 @@ a:hover {
 
 .btn-primary {
   color: #fff;
-  background-color: var(--primary);
+  background: linear-gradient(135deg, var(--primary) 0%, #5a5cd7 100%);
   border-color: var(--primary);
+  box-shadow: 0 2px 6px rgba(105, 108, 255, 0.3);
+  position: relative;
+  overflow: hidden;
+  transform: translateY(0);
+}
+
+.btn-primary::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+  transition: left 0.5s ease;
 }
 
 .btn-primary:hover {
   color: #fff;
-  background-color: var(--primary-hover);
+  background: linear-gradient(135deg, var(--primary-hover) 0%, #4749d4 100%);
   border-color: var(--primary-hover);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(105, 108, 255, 0.4);
+}
+
+.btn-primary:hover::before {
+  left: 100%;
+}
+
+.btn-primary:active {
+  transform: translateY(0);
+  box-shadow: 0 1px 4px rgba(105, 108, 255, 0.3);
+}
+
+.btn-primary svg {
+  transition: transform 0.3s ease;
+}
+
+.btn-primary:hover svg {
+  transform: rotate(90deg);
+}
+
+.btn-create {
+  font-weight: var(--font-weight-semibold);
+  padding: 12px 24px;
+  font-size: 15px;
+  letter-spacing: 0.3px;
 }
 
 .btn-secondary {
@@ -361,50 +402,101 @@ textarea.form-control {
 
 /* ========== Badges ========== */
 .badge {
-  display: inline-block;
-  padding: 0.3rem 0.55rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.4rem 0.75rem;
   font-size: var(--font-size-xs);
-  font-weight: var(--font-weight-semibold);
+  font-weight: var(--font-weight-bold);
   line-height: 1;
   text-align: center;
   white-space: nowrap;
   vertical-align: baseline;
-  border-radius: var(--border-radius-sm);
+  border-radius: var(--border-radius-pill);
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  min-width: 28px;
+  height: 28px;
+}
+
+.badge:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+a.badge {
+  text-decoration: none;
 }
 
 .badge-primary {
   color: #fff;
-  background-color: var(--primary);
+  background: linear-gradient(135deg, #696cff 0%, #5a5fc7 100%);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.badge-primary:hover {
+  background: linear-gradient(135deg, #5a5fc7 0%, #4a4fb7 100%);
 }
 
 .badge-secondary {
   color: #fff;
-  background-color: var(--secondary);
+  background: linear-gradient(135deg, #8592a3 0%, #717d8f 100%);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.badge-secondary:hover {
+  background: linear-gradient(135deg, #717d8f 0%, #5d687b 100%);
 }
 
 .badge-success {
   color: #fff;
-  background-color: var(--success);
+  background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.badge-success:hover {
+  background: linear-gradient(135deg, #20c997 0%, #1ba87e 100%);
 }
 
 .badge-danger {
   color: #fff;
-  background-color: var(--danger);
+  background: linear-gradient(135deg, #dc3545 0%, #e83e8c 100%);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.badge-danger:hover {
+  background: linear-gradient(135deg, #e83e8c 0%, #d02670 100%);
 }
 
 .badge-warning {
   color: #fff;
-  background-color: var(--warning);
+  background: linear-gradient(135deg, #ffc107 0%, #ff9800 100%);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.badge-warning:hover {
+  background: linear-gradient(135deg, #ff9800 0%, #f57c00 100%);
 }
 
 .badge-info {
   color: #fff;
-  background-color: var(--info);
+  background: linear-gradient(135deg, #17a2b8 0%, #20c997 100%);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.badge-info:hover {
+  background: linear-gradient(135deg, #20c997 0%, #138496 100%);
 }
 
 .badge-light {
   color: var(--text-heading);
-  background-color: var(--gray-100);
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.badge-light:hover {
+  background: linear-gradient(135deg, #e9ecef 0%, #dee2e6 100%);
 }
 
 /* ========== Utilities ========== */

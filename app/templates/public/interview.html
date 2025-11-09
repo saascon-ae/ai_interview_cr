@@ -125,6 +125,106 @@
     .timer-display.active {
         color: #f44336;
     }
+    
+    /* Thinking Animation */
+    .thinking-container {
+        display: none;
+        text-align: center;
+        padding: 20px;
+        background: #e3f2fd;
+        border-radius: 8px;
+        margin-bottom: 20px;
+    }
+    
+    .thinking-container.active {
+        display: block;
+    }
+    
+    .thinking-dots {
+        display: inline-flex;
+        gap: 8px;
+        margin-top: 10px;
+    }
+    
+    .thinking-dots span {
+        width: 12px;
+        height: 12px;
+        background: var(--primary, #696cff);
+        border-radius: 50%;
+        animation: thinking 1.4s infinite;
+    }
+    
+    .thinking-dots span:nth-child(2) {
+        animation-delay: 0.2s;
+    }
+    
+    .thinking-dots span:nth-child(3) {
+        animation-delay: 0.4s;
+    }
+    
+    @keyframes thinking {
+        0%, 60%, 100% {
+            transform: scale(1);
+            opacity: 0.5;
+        }
+        30% {
+            transform: scale(1.3);
+            opacity: 1;
+        }
+    }
+    
+    /* Text Input Section */
+    .text-input-section {
+        display: none;
+        margin-top: 20px;
+    }
+    
+    .text-input-section.active {
+        display: block;
+    }
+    
+    .answer-textarea {
+        width: 100%;
+        min-height: 120px;
+        padding: 15px;
+        border: 2px solid #ddd;
+        border-radius: 8px;
+        font-size: 16px;
+        font-family: inherit;
+        resize: vertical;
+        margin-bottom: 15px;
+    }
+    
+    .answer-textarea:focus {
+        outline: none;
+        border-color: var(--primary, #696cff);
+    }
+    
+    .input-mode-toggle {
+        text-align: center;
+        margin: 15px 0;
+        padding: 10px;
+        background: #f0f0f0;
+        border-radius: 4px;
+    }
+    
+    .input-mode-toggle a {
+        color: var(--primary, #696cff);
+        text-decoration: none;
+        font-weight: 600;
+        cursor: pointer;
+    }
+    
+    .input-mode-toggle a:hover {
+        text-decoration: underline;
+    }
+    
+    .controls-voice, .controls-text {
+        display: flex;
+        gap: 10px;
+        justify-content: center;
+        flex-wrap: wrap;
+    }
 </style>
 {% endblock %}
 
@@ -142,6 +242,16 @@
             <div class="progress-fill" id="progressFill" style="width: 0%"></div>
         </div>
         
+        <!-- Thinking Animation -->
+        <div class="thinking-container" id="thinkingContainer">
+            <div style="font-size: 18px; font-weight: 600; color: #666;">🤔 AI is preparing the question...</div>
+            <div class="thinking-dots">
+                <span></span>
+                <span></span>
+                <span></span>
+            </div>
+        </div>
+        
         <div class="chat-container" id="chatContainer">
             <div class="message message-ai">
                 <div class="message-sender">AI Interviewer</div>
@@ -153,10 +263,25 @@
         
         <div class="timer-display" id="timerDisplay" style="display: none;"></div>
         
-        <div class="controls">
+        <!-- Input Mode Toggle -->
+        <div class="input-mode-toggle" id="inputModeToggle" style="display: none;">
+            <span id="toggleText">Having trouble with recording? <a id="toggleModeBtn">Type your answer instead</a></span>
+        </div>
+        
+        <!-- Voice Controls -->
+        <div class="controls controls-voice" id="voiceControls">
             <button id="recordBtn" class="btn" disabled>Start Recording</button>
             <button id="stopBtn" class="btn btn-danger" style="display: none;">Stop & Submit Answer</button>
             <button id="skipBtn" class="btn btn-secondary" disabled>Skip Question</button>
+        </div>
+        
+        <!-- Text Input Section -->
+        <div class="text-input-section" id="textInputSection">
+            <textarea id="answerTextarea" class="answer-textarea" placeholder="Type your answer here..."></textarea>
+            <div class="controls controls-text">
+                <button id="submitTextBtn" class="btn btn-primary">Submit Answer</button>
+                <button id="skipTextBtn" class="btn btn-secondary">Skip Question</button>
+            </div>
         </div>
     </div>
 </div>
@@ -173,6 +298,9 @@ let currentQuestionNumber = 0;
 let recordingStartTime = null;
 let timerInterval = null;
 let skipInProgress = false;
+let pendingQuestionData = null;
+let questionSpeechReady = false;
+let inputMode = 'voice'; // 'voice' or 'text'
 
 // Connect to WebSocket
 socket.on('connect', () => {
@@ -182,29 +310,31 @@ socket.on('connect', () => {
 });
 
 socket.on('question', (data) => {
-    currentQuestion = data;
-    totalQuestions = data.total_questions;
-    currentQuestionNumber = data.question_number;
+    console.log('Received question:', data);
+    
+    // Store question data and show thinking animation
+    pendingQuestionData = data;
+    questionSpeechReady = false;
+    
+    // Show thinking animation
+    document.getElementById('thinkingContainer').classList.add('active');
+    updateStatus('🤔 AI is preparing the question...');
     
     // Update progress
-    const progress = (currentQuestionNumber / totalQuestions) * 100;
+    const progress = (data.question_number / data.total_questions) * 100;
     document.getElementById('progressFill').style.width = progress + '%';
-    document.getElementById('progressText').textContent = `Question ${currentQuestionNumber} of ${totalQuestions}`;
-    
-    // Add question to chat
-    addMessage('AI Interviewer', data.text, 'ai');
-    
-    // Enable recording (speech will play automatically when received)
-    document.getElementById('recordBtn').disabled = false;
-    document.getElementById('recordBtn').style.display = 'inline-block';
-    document.getElementById('skipBtn').disabled = false;
-    skipInProgress = false;
-    updateStatus('Listening to question...');
+    document.getElementById('progressText').textContent = `Question ${data.question_number} of ${data.total_questions}`;
 });
 
 socket.on('speech_generated', (data) => {
-    // Play the natural-sounding speech audio
-    playSpeechAudio(data.audio_data);
+    // Mark speech as ready
+    questionSpeechReady = true;
+    
+    // If we have pending question data, now display it
+    if (pendingQuestionData) {
+        displayQuestion(pendingQuestionData, data.audio_data);
+        pendingQuestionData = null;
+    }
 });
 
 socket.on('transcript_received', (data) => {
@@ -227,10 +357,21 @@ socket.on('interview_complete', (data) => {
     // Stop timer if running
     stopTimer();
     
+    // Hide thinking animation
+    document.getElementById('thinkingContainer').classList.remove('active');
+    
     addMessage('AI Interviewer', data.message, 'ai');
     document.getElementById('progressFill').style.width = '100%';
     document.getElementById('progressText').textContent = 'Interview Complete!';
+    
+    // Hide all controls and buttons
     document.getElementById('recordBtn').style.display = 'none';
+    document.getElementById('skipBtn').style.display = 'none';
+    document.getElementById('stopBtn').style.display = 'none';
+    document.getElementById('voiceControls').style.display = 'none';
+    document.getElementById('textInputSection').classList.remove('active');
+    document.getElementById('inputModeToggle').style.display = 'none';
+    
     updateStatus('Thank you for completing the interview!');
     
     setTimeout(() => {
@@ -239,14 +380,18 @@ socket.on('interview_complete', (data) => {
 });
 
 socket.on('error', (data) => {
+    console.error('Server error:', data);
     alert('Error: ' + data.message);
-    updateStatus('Error occurred');
+    updateStatus('Error occurred: ' + data.message);
 });
 
-// Recording functions
+// Event listeners
 document.getElementById('recordBtn').addEventListener('click', startRecording);
 document.getElementById('stopBtn').addEventListener('click', stopRecording);
 document.getElementById('skipBtn').addEventListener('click', skipQuestion);
+document.getElementById('submitTextBtn').addEventListener('click', submitTextAnswer);
+document.getElementById('skipTextBtn').addEventListener('click', skipQuestion);
+document.getElementById('toggleModeBtn').addEventListener('click', toggleInputMode);
 
 async function startRecording() {
     try {
@@ -318,6 +463,7 @@ function processRecording() {
         addMessage('You', 'Audio answer recorded', 'user');
         
         // Send answer to server
+        console.log('Submitting answer for question_id:', currentQuestion.question_id);
         socket.emit('answer_submitted', {
             question_id: currentQuestion.question_id,
             audio_data: base64Audio,
@@ -421,6 +567,129 @@ function stopTimer() {
     const timerDisplay = document.getElementById('timerDisplay');
     timerDisplay.textContent = '';
     timerDisplay.classList.remove('active');
+}
+
+// Display question and play speech
+function displayQuestion(questionData, audioData) {
+    // Hide thinking animation
+    document.getElementById('thinkingContainer').classList.remove('active');
+    
+    // Store current question data
+    currentQuestion = questionData;
+    totalQuestions = questionData.total_questions;
+    currentQuestionNumber = questionData.question_number;
+    
+    // Add question to chat
+    addMessage('AI Interviewer', questionData.text, 'ai');
+    
+    // Play speech audio
+    playSpeechAudio(audioData);
+    
+    // Enable controls based on input mode
+    if (inputMode === 'voice') {
+        document.getElementById('recordBtn').disabled = false;
+        document.getElementById('recordBtn').style.display = 'inline-block';
+        document.getElementById('skipBtn').disabled = false;
+        
+        // Hide skip button on last question
+        if (currentQuestionNumber === totalQuestions) {
+            document.getElementById('skipBtn').style.display = 'none';
+        } else {
+            document.getElementById('skipBtn').style.display = 'inline-block';
+        }
+    } else {
+        // Text mode
+        document.getElementById('answerTextarea').value = '';
+        document.getElementById('answerTextarea').disabled = false;
+        document.getElementById('submitTextBtn').disabled = false;
+        document.getElementById('skipTextBtn').disabled = false;
+        
+        // Hide skip button on last question
+        if (currentQuestionNumber === totalQuestions) {
+            document.getElementById('skipTextBtn').style.display = 'none';
+        } else {
+            document.getElementById('skipTextBtn').style.display = 'inline-block';
+        }
+    }
+    
+    // Show toggle option
+    document.getElementById('inputModeToggle').style.display = 'block';
+    
+    skipInProgress = false;
+}
+
+// Toggle between voice and text input modes
+function toggleInputMode() {
+    if (inputMode === 'voice') {
+        // Switch to text mode
+        inputMode = 'text';
+        document.getElementById('voiceControls').style.display = 'none';
+        document.getElementById('textInputSection').classList.add('active');
+        document.getElementById('toggleText').innerHTML = 'Prefer voice? <a id="toggleModeBtn">Switch to voice recording</a>';
+        
+        // Reattach event listener to new button
+        document.getElementById('toggleModeBtn').addEventListener('click', toggleInputMode);
+        
+        // Configure skip button visibility for text mode
+        if (currentQuestionNumber === totalQuestions) {
+            document.getElementById('skipTextBtn').style.display = 'none';
+        } else {
+            document.getElementById('skipTextBtn').style.display = 'inline-block';
+        }
+        
+        updateStatus('Type your answer in the box below');
+    } else {
+        // Switch to voice mode
+        inputMode = 'voice';
+        document.getElementById('voiceControls').style.display = 'flex';
+        document.getElementById('textInputSection').classList.remove('active');
+        document.getElementById('toggleText').innerHTML = 'Having trouble with recording? <a id="toggleModeBtn">Type your answer instead</a>';
+        
+        // Reattach event listener to new button
+        document.getElementById('toggleModeBtn').addEventListener('click', toggleInputMode);
+        
+        // Configure skip button visibility for voice mode
+        if (currentQuestionNumber === totalQuestions) {
+            document.getElementById('skipBtn').style.display = 'none';
+        } else {
+            document.getElementById('skipBtn').style.display = 'inline-block';
+        }
+        
+        updateStatus('Click "Start Recording" to answer');
+    }
+}
+
+// Submit text answer
+function submitTextAnswer() {
+    const answerText = document.getElementById('answerTextarea').value.trim();
+    
+    if (!answerText) {
+        alert('Please type your answer before submitting.');
+        return;
+    }
+    
+    if (!currentQuestion) {
+        alert('No active question to answer.');
+        return;
+    }
+    
+    // Disable controls
+    document.getElementById('answerTextarea').disabled = true;
+    document.getElementById('submitTextBtn').disabled = true;
+    document.getElementById('skipTextBtn').disabled = true;
+    
+    // Add user message to chat
+    addMessage('You', answerText, 'user');
+    
+    // Send answer to server (no audio, just text)
+    socket.emit('answer_submitted', {
+        question_id: currentQuestion.question_id,
+        audio_data: null,
+        answer_text: answerText,
+        duration: null
+    });
+    
+    updateStatus('Processing your answer...');
 }
 </script>
 {% endblock %}

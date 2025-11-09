@@ -1,8 +1,10 @@
 from flask import Blueprint, render_template, redirect, url_for, flash, request, session
 from app import db
-from app.models import Organization, Job, Candidate, Application, Question, Answer
+from app.models import Organization, Job, Candidate, Application, Question, Answer, User
 from app.utils.validators import save_uploaded_file
+from app.utils.auth import generate_password, generate_slug
 from app.services.ai_service import analyze_cv, evaluate_answer
+from app.services.email_service import send_invitation_email
 from datetime import datetime
 
 public_bp = Blueprint('public', __name__)
@@ -11,6 +13,104 @@ public_bp = Blueprint('public', __name__)
 def index():
     """Landing page"""
     return render_template('public/index.html')
+
+@public_bp.route('/register', methods=['GET', 'POST'])
+def register():
+    """Visitor registration page"""
+    if request.method == 'POST':
+        # Get form data
+        name = request.form.get('name')
+        email = request.form.get('email')
+        first_name = request.form.get('first_name')
+        last_name = request.form.get('last_name')
+        phone = request.form.get('phone')
+        trn = request.form.get('trn')
+        
+        # Validate required fields
+        if not all([name, email, first_name, last_name]):
+            flash('Please fill in all required fields', 'danger')
+            return redirect(url_for('public.register'))
+        
+        # Check if organization email already exists
+        if Organization.query.filter_by(email=email).first():
+            flash('An account with this email already exists. Please login or use a different email.', 'danger')
+            return redirect(url_for('public.register'))
+        
+        # Check if user email already exists
+        if User.query.filter_by(email=email).first():
+            flash('An account with this email already exists. Please login or use a different email.', 'danger')
+            return redirect(url_for('public.register'))
+        
+        # Generate slug from organization name
+        base_slug = generate_slug(name)
+        slug = base_slug
+        counter = 1
+        while Organization.query.filter_by(slug=slug).first():
+            slug = f"{base_slug}-{counter}"
+            counter += 1
+        
+        # Handle logo upload
+        logo_path = None
+        if 'logo' in request.files:
+            logo = request.files['logo']
+            if logo.filename != '':
+                logo_path, error = save_uploaded_file(logo, 'logos')
+                if error:
+                    flash(error, 'danger')
+                    return redirect(url_for('public.register'))
+        
+        try:
+            # Create organization
+            organization = Organization(
+                name=name,
+                email=email,
+                first_name=first_name,
+                last_name=last_name,
+                phone=phone,
+                trn=trn,
+                logo_path=logo_path,
+                slug=slug,
+                status='active'
+            )
+            
+            db.session.add(organization)
+            db.session.flush()  # Get organization ID
+            
+            # Generate temporary password
+            temp_password = generate_password()
+            
+            # Create admin user for this organization
+            user = User(
+                email=email,
+                first_name=first_name,
+                last_name=last_name,
+                role='org_admin',
+                organization_id=organization.id,
+                must_change_password=True,
+                is_active=True
+            )
+            user.set_password(temp_password)
+            
+            db.session.add(user)
+            db.session.commit()
+            
+            # Send invitation email with temporary password
+            try:
+                send_invitation_email(organization, temp_password)
+                flash('Registration successful! Please check your email for login credentials.', 'success')
+            except Exception as e:
+                print(f"Error sending invitation email: {e}")
+                flash('Registration successful! However, we couldn\'t send the email. Please contact support for your login credentials.', 'warning')
+            
+            return redirect(url_for('public.index'))
+            
+        except Exception as e:
+            db.session.rollback()
+            print(f"Error during registration: {e}")
+            flash('An error occurred during registration. Please try again.', 'danger')
+            return redirect(url_for('public.register'))
+    
+    return render_template('public/register.html')
 
 @public_bp.route('/<org_slug>/openings')
 def organization_openings(org_slug):

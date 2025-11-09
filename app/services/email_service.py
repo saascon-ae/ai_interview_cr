@@ -1,6 +1,7 @@
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
+from email.mime.application import MIMEApplication
 from flask import current_app, render_template
 from jinja2 import Template
 
@@ -250,4 +251,103 @@ def send_user_invitation_email(user, organization, password):
     """
 
     return send_email(user.email, subject, html_content)
+
+def send_application_pdf_email(to_email, application, pdf_buffer):
+    """Send application PDF to specified email address"""
+    candidate = application.candidate
+    job = application.job
+    organization = job.organization if job else None
+    
+    if not candidate or not job or not organization:
+        raise ValueError("Incomplete application data for PDF email")
+    
+    subject = f"Application Report - {candidate.first_name} {candidate.last_name} - {job.title}"
+    
+    html_content = f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <style>
+            body {{ font-family: Arial, sans-serif; line-height: 1.6; color: #333; }}
+            .container {{ max-width: 600px; margin: 0 auto; padding: 24px; background-color: #f9f9f9; }}
+            .header {{ text-align: center; margin-bottom: 24px; }}
+            .card {{ background-color: #ffffff; padding: 24px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }}
+            .info-row {{ margin: 12px 0; padding: 12px; background-color: #f5f5f5; border-radius: 4px; }}
+            .label {{ font-weight: 600; color: #666; }}
+            .footer {{ text-align: center; padding: 16px; font-size: 12px; color: #777; }}
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <div class="header">
+                <h2>Application Report</h2>
+            </div>
+            <div class="card">
+                <p>Please find attached the application report for:</p>
+                
+                <div class="info-row">
+                    <span class="label">Candidate:</span> {candidate.first_name} {candidate.last_name}
+                </div>
+                <div class="info-row">
+                    <span class="label">Position:</span> {job.title}
+                </div>
+                <div class="info-row">
+                    <span class="label">Organization:</span> {organization.name}
+                </div>
+                
+                <p style="margin-top: 24px;">The attached PDF contains the complete application details, interview responses, scores, and candidate profile.</p>
+                
+                <p style="margin-top: 24px;">Best regards,<br>{organization.name} HR Team</p>
+            </div>
+            <div class="footer">
+                <p>This is an automated message from the HR Interview Platform.</p>
+            </div>
+        </div>
+    </body>
+    </html>
+    """
+    
+    try:
+        # Create message with attachment
+        msg = MIMEMultipart('mixed')
+        msg['Subject'] = subject
+        msg['From'] = f"{current_app.config['SMTP_FROM_NAME']} <{current_app.config['SMTP_FROM_EMAIL']}>"
+        msg['To'] = to_email
+        
+        # Attach HTML content
+        html_part = MIMEText(html_content, 'html')
+        msg.attach(html_part)
+        
+        # Attach PDF
+        pdf_buffer.seek(0)
+        pdf_attachment = MIMEApplication(pdf_buffer.read(), _subtype='pdf')
+        pdf_filename = f"Application_{candidate.first_name}_{candidate.last_name}_{job.title}.pdf".replace(' ', '_')
+        pdf_attachment.add_header('Content-Disposition', 'attachment', filename=pdf_filename)
+        msg.attach(pdf_attachment)
+        
+        # Connect to SMTP server
+        smtp_host = current_app.config['SMTP_HOST']
+        smtp_port = current_app.config['SMTP_PORT']
+        smtp_user = current_app.config['SMTP_USER']
+        smtp_password = current_app.config['SMTP_PASSWORD']
+        use_tls = current_app.config['SMTP_USE_TLS']
+        use_ssl = current_app.config.get('SMTP_USE_SSL', False)
+        
+        if use_ssl:
+            server = smtplib.SMTP_SSL(smtp_host, smtp_port)
+        elif use_tls:
+            server = smtplib.SMTP(smtp_host, smtp_port)
+            server.starttls()
+        else:
+            server = smtplib.SMTP(smtp_host, smtp_port)
+        
+        server.login(smtp_user, smtp_password)
+        server.send_message(msg)
+        server.quit()
+        
+        return True
+        
+    except Exception as e:
+        print(f"Error sending PDF email: {e}")
+        raise
 

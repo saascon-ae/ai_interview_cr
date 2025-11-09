@@ -109,8 +109,13 @@ body {
                 <p class="page-subtitle">Invite and manage your team members</p>
             </div>
             <div>
-                <button type="button" class="btn btn-primary" onclick="openInviteModal()">
-                    + Invite Team Member
+                <button type="button" class="btn btn-primary btn-create" onclick="openInviteModal()">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <line x1="12" y1="8" x2="12" y2="16"></line>
+                        <line x1="8" y1="12" x2="16" y2="12"></line>
+                    </svg>
+                    Invite Team Member
                 </button>
             </div>
         </div>
@@ -152,7 +157,7 @@ body {
                                     <span class="badge badge-secondary">No</span>
                                 {% endif %}
                             </td>
-                            <td>{{ member.created_at.strftime('%Y-%m-%d') }}</td>
+                            <td>{{ member.created_at.strftime('%d-%m-%Y') }}</td>
                             <td>
                                 <div style="display: flex; gap: var(--spacing-2);">
                                     <button type="button" class="btn btn-sm btn-secondary" onclick="openEditModal({{ member.id }}, '{{ member.first_name }}', '{{ member.last_name }}', '{{ member.email }}')">

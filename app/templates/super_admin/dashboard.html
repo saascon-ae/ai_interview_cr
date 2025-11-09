@@ -2,6 +2,59 @@
 
 {% block title %}Super Admin Dashboard{% endblock %}
 
+{% block extra_css %}
+<style>
+.btn-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 8px;
+    border: none;
+    background: none;
+    cursor: pointer;
+    border-radius: 4px;
+    transition: all 0.2s ease;
+    text-decoration: none;
+    height: 34px;
+    width: 34px;
+}
+
+.btn-edit {
+    color: var(--secondary, #6c757d);
+}
+
+.btn-edit:hover {
+    background-color: rgba(108, 117, 125, 0.1);
+    color: var(--secondary-dark, #5a6268);
+}
+
+.btn-edit svg {
+    transition: transform 0.2s ease;
+}
+
+.btn-edit:hover svg {
+    transform: scale(1.1);
+}
+
+.btn-invite {
+    color: var(--primary);
+}
+
+.btn-invite:hover {
+    background-color: rgba(105, 108, 255, 0.1);
+    color: var(--primary-dark);
+}
+
+.btn-invite svg {
+    transition: transform 0.2s ease;
+}
+
+.btn-invite:hover svg {
+    transform: scale(1.1);
+}
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="container" style="padding-top: var(--spacing-8); padding-bottom: var(--spacing-8);">
     <div class="page-header">
@@ -11,6 +64,7 @@
                 <p class="page-subtitle">Manage organizations and system settings</p>
             </div>
             <div class="page-actions">
+                <a href="{{ url_for('super_admin.ai_prompts') }}" class="btn btn-secondary">🤖 AI Prompts</a>
                 <a href="{{ url_for('super_admin.change_password') }}" class="btn btn-secondary">Change Password</a>
                 <a href="{{ url_for('super_admin.add_organization') }}" class="btn btn-primary">+ Add Organization</a>
                 <a href="{{ url_for('auth.logout') }}" class="btn btn-secondary">Logout</a>
@@ -62,10 +116,20 @@
                         </span>
                     </td>
                     <td>
-                        <div style="display: flex; gap: var(--spacing-2); flex-wrap: wrap;">
-                            <a href="{{ url_for('super_admin.edit_organization', org_id=stat.organization.id) }}" class="btn btn-sm btn-secondary">Edit</a>
+                        <div style="display: flex; gap: var(--spacing-2); flex-wrap: wrap; align-items: center;">
+                            <a href="{{ url_for('super_admin.edit_organization', org_id=stat.organization.id) }}" class="btn-icon btn-edit" title="Edit Organization">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                                    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                                </svg>
+                            </a>
                             <form method="POST" action="{{ url_for('super_admin.send_invite', org_id=stat.organization.id) }}" style="display: inline;">
-                                <button type="submit" class="btn btn-sm btn-primary">Send Invite</button>
+                                <button type="submit" class="btn-icon btn-invite" title="Send Invite">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
+                                        <polyline points="22,6 12,13 2,6"></polyline>
+                                    </svg>
+                                </button>
                             </form>
                             <a href="{{ url_for('super_admin.toggle_organization_status', org_id=stat.organization.id) }}" 
                                class="btn btn-sm {{ 'btn-success' if stat.organization.status == 'inactive' else 'btn-warning' }}" 

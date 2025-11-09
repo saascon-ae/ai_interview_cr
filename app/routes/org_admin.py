@@ -26,6 +26,10 @@ def dashboard():
         organization_id=current_user.organization_id
     ).order_by(Job.created_at.desc()).limit(5).all()
     
+    # Add application count for each job
+    for job in recent_jobs:
+        job.application_count = job.applications.count()
+    
     return render_template('org_admin/dashboard.html', 
                          total_jobs=total_jobs,
                          total_applications=total_applications,
@@ -208,10 +212,24 @@ def delete_question(question_id):
 @login_required
 @org_admin_required
 def applications():
-    # Get all applications for this organization's jobs
-    applications_list = Application.query.join(Job).join(Candidate).filter(
+    # Get job_id filter from query parameters
+    job_id = request.args.get('job_id', type=int)
+    selected_job = None
+    
+    # Build query for applications
+    query = Application.query.join(Job).join(Candidate).filter(
         Job.organization_id == current_user.organization_id
-    ).order_by(Application.created_at.desc()).all()
+    )
+    
+    # Apply job filter if provided
+    if job_id:
+        query = query.filter(Application.job_id == job_id)
+        selected_job = Job.query.filter_by(
+            id=job_id,
+            organization_id=current_user.organization_id
+        ).first()
+    
+    applications_list = query.order_by(Application.created_at.desc()).all()
 
     # Compute score percentages and split into recommended / others
     recommended_applications = []
@@ -225,7 +243,7 @@ def applications():
         
         application.score_percentage = percentage
         
-        if percentage >= 80:
+        if percentage >= 70:
             recommended_applications.append(application)
         else:
             other_applications.append(application)
@@ -234,13 +252,15 @@ def applications():
     recommended_applications.sort(key=lambda app: app.score_percentage, reverse=True)
     other_applications.sort(key=lambda app: app.score_percentage, reverse=True)
     
-    # Get all jobs for filtering
+    # Get all jobs for filtering dropdown
     jobs_list = Job.query.filter_by(organization_id=current_user.organization_id).all()
     
     return render_template('org_admin/applications.html', 
                          recommended_applications=recommended_applications,
                          other_applications=other_applications,
-                         jobs=jobs_list)
+                         jobs=jobs_list,
+                         selected_job=selected_job,
+                         job_id=job_id)
 
 @org_admin_bp.route('/applications/<int:application_id>')
 @login_required
@@ -409,4 +429,96 @@ def edit_team_member(user_id):
     db.session.commit()
     flash(f'User {user.email} has been updated.', 'success')
     return redirect(url_for('org_admin.manage_team'))
+
+@org_admin_bp.route('/applications/<int:application_id>/update-status', methods=['POST'])
+@login_required
+@org_admin_required
+def update_application_status(application_id):
+    application = Application.query.join(Job).filter(
+        Application.id == application_id,
+        Job.organization_id == current_user.organization_id
+    ).first_or_404()
+    
+    new_status = request.form.get('status')
+    
+    # Validate status
+    valid_statuses = ['pending', 'in_progress', 'completed', 'shortlisted', 'rejected']
+    if new_status not in valid_statuses:
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return jsonify({'error': 'Invalid status'}), 400
+        flash('Invalid status selected', 'danger')
+        return redirect(url_for('org_admin.view_application', application_id=application_id))
+    
+    application.status = new_status
+    db.session.commit()
+    
+    # Handle AJAX request
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        return jsonify({'success': True, 'status': new_status})
+    
+    # Handle regular form submission
+    status_labels = {
+        'pending': 'Pending',
+        'in_progress': 'In Progress',
+        'completed': 'Completed',
+        'shortlisted': 'Short Listed',
+        'rejected': 'Rejected'
+    }
+    flash(f'Application status updated to {status_labels.get(new_status, new_status)}', 'success')
+    return redirect(url_for('org_admin.view_application', application_id=application_id))
+
+@org_admin_bp.route('/applications/<int:application_id>/send-pdf-email', methods=['POST'])
+@login_required
+@org_admin_required
+def send_application_pdf_email(application_id):
+    application = Application.query.join(Job).filter(
+        Application.id == application_id,
+        Job.organization_id == current_user.organization_id
+    ).first_or_404()
+    
+    # Get email address from request
+    to_email = request.form.get('email', '').strip()
+    
+    # Validate email
+    if not to_email:
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return jsonify({'error': 'Email address is required'}), 400
+        flash('Email address is required', 'danger')
+        return redirect(url_for('org_admin.view_application', application_id=application_id))
+    
+    # Basic email validation
+    import re
+    email_pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+    if not re.match(email_pattern, to_email):
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return jsonify({'error': 'Invalid email address format'}), 400
+        flash('Invalid email address format', 'danger')
+        return redirect(url_for('org_admin.view_application', application_id=application_id))
+    
+    try:
+        # Generate PDF buffer
+        from app.services.pdf_service import generate_application_pdf_buffer
+        from app.services.email_service import send_application_pdf_email as send_pdf_email
+        
+        pdf_buffer = generate_application_pdf_buffer(application)
+        
+        # Send email with PDF attachment
+        send_pdf_email(to_email, application, pdf_buffer)
+        
+        # Handle AJAX request
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return jsonify({'success': True, 'message': f'PDF sent successfully to {to_email}'})
+        
+        flash(f'Application PDF sent successfully to {to_email}', 'success')
+        return redirect(url_for('org_admin.view_application', application_id=application_id))
+        
+    except Exception as e:
+        print(f"Error sending PDF email: {e}")
+        print(f"Traceback: {traceback.format_exc()}")
+        
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return jsonify({'error': f'Failed to send email: {str(e)}'}), 500
+        
+        flash(f'Failed to send email: {str(e)}', 'danger')
+        return redirect(url_for('org_admin.view_application', application_id=application_id))
 

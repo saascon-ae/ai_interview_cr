@@ -2,11 +2,120 @@
 
 {% block title %}Applications - Organization Dashboard{% endblock %}
 
+{# Helper macro for status labels #}
+{% macro status_label(status) -%}
+    {% if status == 'in_progress' %}In Progress
+    {% elif status == 'shortlisted' %}Short Listed
+    {% elif status == 'rejected' %}Rejected
+    {% elif status == 'completed' %}Completed
+    {% elif status == 'pending' %}Pending
+    {% else %}{{ status.capitalize() }}
+    {% endif %}
+{%- endmacro %}
+
 {% block extra_css %}
 <style>
 body {
     margin: 0;
     padding: 0;
+}
+
+.status-actions {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+}
+
+.status-btn {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.75rem;
+    border: none;
+    border-radius: var(--border-radius-sm);
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.status-btn-shortlist {
+    background-color: var(--success-light);
+    color: var(--success);
+    border: 1px solid rgba(40, 199, 111, 0.3);
+}
+
+.status-btn-shortlist:hover:not(:disabled) {
+    background-color: var(--success);
+    color: white;
+}
+
+.status-btn-reject {
+    background-color: var(--danger-light);
+    color: var(--danger);
+    border: 1px solid rgba(234, 84, 85, 0.3);
+}
+
+.status-btn-reject:hover:not(:disabled) {
+    background-color: var(--danger);
+    color: white;
+}
+
+.status-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.search-container {
+    margin-bottom: var(--spacing-4);
+}
+
+.search-input {
+    width: 100%;
+    max-width: 400px;
+    padding: var(--spacing-3);
+    border: 1px solid var(--border-light);
+    border-radius: var(--border-radius-md);
+    font-size: var(--font-size-base);
+    background-color: #ffffff;
+    color: #333333;
+}
+
+.search-input:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(105, 108, 255, 0.1);
+    background-color: #ffffff;
+}
+
+.search-input::placeholder {
+    color: #999999;
+}
+
+.sortable-header {
+    cursor: pointer;
+    user-select: none;
+    position: relative;
+    padding-right: 20px;
+}
+
+.sortable-header:hover {
+    background-color: var(--gray-100);
+}
+
+.sort-icon {
+    position: absolute;
+    right: 5px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 12px;
+    color: var(--text-secondary);
+}
+
+.sort-icon.active {
+    color: var(--primary);
+}
+
+.no-results {
+    text-align: center;
+    padding: var(--spacing-8) 0;
+    color: var(--text-secondary);
 }
 </style>
 {% endblock %}
@@ -19,6 +128,14 @@ body {
             <div>
                 <h1 class="page-title">Applications</h1>
                 <p class="page-subtitle">Review and manage candidate applications</p>
+                {% if selected_job %}
+                <div style="margin-top: var(--spacing-3);">
+                    <span class="badge badge-info" style="font-size: 14px; padding: 8px 12px;">
+                        Filtered by: {{ selected_job.title }}
+                        <a href="{{ url_for('org_admin.applications') }}" style="color: white; margin-left: 8px; text-decoration: none; font-weight: bold;">✕</a>
+                    </span>
+                </div>
+                {% endif %}
             </div>
         </div>
     </div>
@@ -26,47 +143,81 @@ body {
     <!-- Recommended Candidates Section -->
     <div class="card mb-5">
         <div class="card-body">
-            <h3 class="card-title">Recommended Candidates</h3>
-            <p class="card-subtitle">Candidates who have met the recommended threshold</p>
+            <h3 class="card-title">⭐ Recommended Candidates</h3>
+            <p class="card-subtitle">Candidates with 70% or higher interview scores</p>
             
             {% if recommended_applications %}
+            <div class="search-container">
+                <input type="text" id="searchRecommended" class="search-input" placeholder="🔍 Search by name, email, or job title...">
+            </div>
             <div class="table-container" style="padding: 0; box-shadow: none;">
-                <table class="table">
+                <table class="table" id="recommendedTable">
                     <thead>
                         <tr>
-                            <th>Candidate Name</th>
-                            <th>Email</th>
-                            <th>Phone</th>
-                            <th>Job Title</th>
-                            <th>Status</th>
-                            <th>Score</th>
-                            <th>Score %</th>
-                            <th>Match %</th>
-                            <th>Applied Date</th>
+                            <th class="sortable-header" data-column="name" data-table="recommended">
+                                Candidate Name <span class="sort-icon">⇅</span>
+                            </th>
+                            <th class="sortable-header" data-column="email" data-table="recommended">
+                                Email <span class="sort-icon">⇅</span>
+                            </th>
+                            <th class="sortable-header" data-column="phone" data-table="recommended">
+                                Phone <span class="sort-icon">⇅</span>
+                            </th>
+                            <th class="sortable-header" data-column="job" data-table="recommended">
+                                Job Title <span class="sort-icon">⇅</span>
+                            </th>
+                            <th class="sortable-header" data-column="status" data-table="recommended">
+                                Status <span class="sort-icon">⇅</span>
+                            </th>
+                            <th class="sortable-header" data-column="score" data-table="recommended">
+                                Score <span class="sort-icon">⇅</span>
+                            </th>
+                            <th class="sortable-header" data-column="scorePercent" data-table="recommended">
+                                Score % <span class="sort-icon">⇅</span>
+                            </th>
+                            <th class="sortable-header" data-column="matchPercent" data-table="recommended">
+                                Match % <span class="sort-icon">⇅</span>
+                            </th>
+                            <th class="sortable-header" data-column="date" data-table="recommended">
+                                Applied Date <span class="sort-icon">⇅</span>
+                            </th>
                             <th>Actions</th>
                         </tr>
                     </thead>
-                    <tbody>
+                    <tbody id="recommendedTableBody">
                         {% for app in recommended_applications %}
-                        <tr>
+                        <tr data-name="{{ app.candidate.first_name }} {{ app.candidate.last_name }}" data-email="{{ app.candidate.email }}" data-job="{{ app.job.title }}">
                             <td><strong>{{ app.candidate.first_name }} {{ app.candidate.last_name }}</strong></td>
                             <td>{{ app.candidate.email }}</td>
                             <td>{{ app.candidate.phone or 'N/A' }}</td>
                             <td>{{ app.job.title }}</td>
                             <td>
-                                <span class="status-badge status-{{ app.status }}">{{ app.status.capitalize() }}</span>
+                                <span class="status-badge status-{{ app.status }}">{{ status_label(app.status) }}</span>
                             </td>
-                            <td>{{ '%.1f' % app.total_score }} / {{ app.total_weightage }}</td>
-                            <td><span class="badge badge-success">{{ '%.1f' % app.score_percentage }}%</span></td>
-                            <td><span class="badge badge-primary">{{ '%.1f' % app.candidate.matching_percentage if app.candidate.matching_percentage else 'N/A' }}%</span></td>
-                            <td>{{ app.created_at.strftime('%Y-%m-%d') }}</td>
+                            <td data-sort-value="{{ app.total_score }}">{{ '%.1f' % app.total_score }} / {{ app.total_weightage }}</td>
+                            <td data-sort-value="{{ app.score_percentage }}"><span class="badge {% if app.score_percentage >= 70 %}badge-primary{% elif app.score_percentage >= 50 %}badge-success{% else %}badge-danger{% endif %}">{{ '%.1f' % app.score_percentage }}%</span></td>
+                            <td data-sort-value="{{ app.candidate.matching_percentage if app.candidate.matching_percentage else 0 }}"><span class="badge badge-primary">{{ '%.1f' % app.candidate.matching_percentage if app.candidate.matching_percentage else 'N/A' }}%</span></td>
+                            <td data-sort-value="{{ app.created_at.strftime('%Y%m%d') }}">{{ app.created_at.strftime('%d-%m-%Y') }}</td>
                             <td>
-                                <a href="{{ url_for('org_admin.view_application', application_id=app.id) }}" class="btn btn-sm btn-primary">View</a>
+                                <div class="status-actions">
+                                    <a href="{{ url_for('org_admin.view_application', application_id=app.id) }}" class="btn btn-sm btn-primary">View</a>
+                                    <form method="POST" action="{{ url_for('org_admin.update_application_status', application_id=app.id) }}" style="display: inline;">
+                                        <input type="hidden" name="status" value="shortlisted">
+                                        <button type="submit" class="status-btn status-btn-shortlist" {% if app.status == 'shortlisted' %}disabled{% endif %} title="Short List">✓</button>
+                                    </form>
+                                    <form method="POST" action="{{ url_for('org_admin.update_application_status', application_id=app.id) }}" style="display: inline;">
+                                        <input type="hidden" name="status" value="rejected">
+                                        <button type="submit" class="status-btn status-btn-reject" {% if app.status == 'rejected' %}disabled{% endif %} title="Reject">✗</button>
+                                    </form>
+                                </div>
                             </td>
                         </tr>
                         {% endfor %}
                     </tbody>
                 </table>
+                <div id="recommendedNoResults" class="no-results" style="display: none;">
+                    <p>No candidates found matching your search.</p>
+                </div>
             </div>
             {% else %}
             <div class="text-center" style="padding: var(--spacing-8) 0;">
@@ -83,43 +234,77 @@ body {
             <p class="card-subtitle">All other candidate applications</p>
             
             {% if other_applications %}
+            <div class="search-container">
+                <input type="text" id="searchOther" class="search-input" placeholder="🔍 Search by name, email, or job title...">
+            </div>
             <div class="table-container" style="padding: 0; box-shadow: none;">
-                <table class="table">
+                <table class="table" id="otherTable">
                     <thead>
                         <tr>
-                            <th>Candidate Name</th>
-                            <th>Email</th>
-                            <th>Phone</th>
-                            <th>Job Title</th>
-                            <th>Status</th>
-                            <th>Score</th>
-                            <th>Score %</th>
-                            <th>Match %</th>
-                            <th>Applied Date</th>
+                            <th class="sortable-header" data-column="name" data-table="other">
+                                Candidate Name <span class="sort-icon">⇅</span>
+                            </th>
+                            <th class="sortable-header" data-column="email" data-table="other">
+                                Email <span class="sort-icon">⇅</span>
+                            </th>
+                            <th class="sortable-header" data-column="phone" data-table="other">
+                                Phone <span class="sort-icon">⇅</span>
+                            </th>
+                            <th class="sortable-header" data-column="job" data-table="other">
+                                Job Title <span class="sort-icon">⇅</span>
+                            </th>
+                            <th class="sortable-header" data-column="status" data-table="other">
+                                Status <span class="sort-icon">⇅</span>
+                            </th>
+                            <th class="sortable-header" data-column="score" data-table="other">
+                                Score <span class="sort-icon">⇅</span>
+                            </th>
+                            <th class="sortable-header" data-column="scorePercent" data-table="other">
+                                Score % <span class="sort-icon">⇅</span>
+                            </th>
+                            <th class="sortable-header" data-column="matchPercent" data-table="other">
+                                Match % <span class="sort-icon">⇅</span>
+                            </th>
+                            <th class="sortable-header" data-column="date" data-table="other">
+                                Applied Date <span class="sort-icon">⇅</span>
+                            </th>
                             <th>Actions</th>
                         </tr>
                     </thead>
-                    <tbody>
+                    <tbody id="otherTableBody">
                         {% for app in other_applications %}
-                        <tr>
+                        <tr data-name="{{ app.candidate.first_name }} {{ app.candidate.last_name }}" data-email="{{ app.candidate.email }}" data-job="{{ app.job.title }}">
                             <td><strong>{{ app.candidate.first_name }} {{ app.candidate.last_name }}</strong></td>
                             <td>{{ app.candidate.email }}</td>
                             <td>{{ app.candidate.phone or 'N/A' }}</td>
                             <td>{{ app.job.title }}</td>
                             <td>
-                                <span class="status-badge status-{{ app.status }}">{{ app.status.capitalize() }}</span>
+                                <span class="status-badge status-{{ app.status }}">{{ status_label(app.status) }}</span>
                             </td>
-                            <td>{{ '%.1f' % app.total_score }} / {{ app.total_weightage }}</td>
-                            <td><span class="badge badge-secondary">{{ '%.1f' % app.score_percentage }}%</span></td>
-                            <td><span class="badge badge-info">{{ '%.1f' % app.candidate.matching_percentage if app.candidate.matching_percentage else 'N/A' }}%</span></td>
-                            <td>{{ app.created_at.strftime('%Y-%m-%d') }}</td>
+                            <td data-sort-value="{{ app.total_score }}">{{ '%.1f' % app.total_score }} / {{ app.total_weightage }}</td>
+                            <td data-sort-value="{{ app.score_percentage }}"><span class="badge {% if app.score_percentage >= 70 %}badge-primary{% elif app.score_percentage >= 50 %}badge-success{% else %}badge-danger{% endif %}">{{ '%.1f' % app.score_percentage }}%</span></td>
+                            <td data-sort-value="{{ app.candidate.matching_percentage if app.candidate.matching_percentage else 0 }}"><span class="badge badge-info">{{ '%.1f' % app.candidate.matching_percentage if app.candidate.matching_percentage else 'N/A' }}%</span></td>
+                            <td data-sort-value="{{ app.created_at.strftime('%Y%m%d') }}">{{ app.created_at.strftime('%d-%m-%Y') }}</td>
                             <td>
-                                <a href="{{ url_for('org_admin.view_application', application_id=app.id) }}" class="btn btn-sm btn-secondary">View</a>
+                                <div class="status-actions">
+                                    <a href="{{ url_for('org_admin.view_application', application_id=app.id) }}" class="btn btn-sm btn-secondary">View</a>
+                                    <form method="POST" action="{{ url_for('org_admin.update_application_status', application_id=app.id) }}" style="display: inline;">
+                                        <input type="hidden" name="status" value="shortlisted">
+                                        <button type="submit" class="status-btn status-btn-shortlist" {% if app.status == 'shortlisted' %}disabled{% endif %} title="Short List">✓</button>
+                                    </form>
+                                    <form method="POST" action="{{ url_for('org_admin.update_application_status', application_id=app.id) }}" style="display: inline;">
+                                        <input type="hidden" name="status" value="rejected">
+                                        <button type="submit" class="status-btn status-btn-reject" {% if app.status == 'rejected' %}disabled{% endif %} title="Reject">✗</button>
+                                    </form>
+                                </div>
                             </td>
                         </tr>
                         {% endfor %}
                     </tbody>
                 </table>
+                <div id="otherNoResults" class="no-results" style="display: none;">
+                    <p>No candidates found matching your search.</p>
+                </div>
             </div>
             {% else %}
             <div class="text-center" style="padding: var(--spacing-8) 0;">
@@ -128,6 +313,136 @@ body {
             {% endif %}
         </div>
     </div>
+
+    <script>
+        // Search functionality
+        function setupSearch(inputId, tableBodyId, noResultsId) {
+            const searchInput = document.getElementById(inputId);
+            if (!searchInput) return;
+
+            searchInput.addEventListener('input', function() {
+                const searchTerm = this.value.toLowerCase().trim();
+                const tableBody = document.getElementById(tableBodyId);
+                const rows = tableBody.getElementsByTagName('tr');
+                const noResults = document.getElementById(noResultsId);
+                let visibleCount = 0;
+
+                for (let row of rows) {
+                    const name = row.getAttribute('data-name').toLowerCase();
+                    const email = row.getAttribute('data-email').toLowerCase();
+                    const job = row.getAttribute('data-job').toLowerCase();
+                    
+                    if (name.includes(searchTerm) || email.includes(searchTerm) || job.includes(searchTerm)) {
+                        row.style.display = '';
+                        visibleCount++;
+                    } else {
+                        row.style.display = 'none';
+                    }
+                }
+
+                // Show/hide no results message
+                if (visibleCount === 0 && searchTerm !== '') {
+                    noResults.style.display = 'block';
+                } else {
+                    noResults.style.display = 'none';
+                }
+            });
+        }
+
+        // Sorting functionality
+        const sortStates = {
+            recommended: {},
+            other: {}
+        };
+
+        function sortTable(column, tableId, tableBodyId) {
+            const tableBody = document.getElementById(tableBodyId);
+            const rows = Array.from(tableBody.getElementsByTagName('tr'));
+            const currentState = sortStates[tableId][column] || 'none';
+            
+            // Determine new sort direction
+            let newState;
+            if (currentState === 'none' || currentState === 'desc') {
+                newState = 'asc';
+            } else {
+                newState = 'desc';
+            }
+            
+            // Reset all other columns in this table
+            sortStates[tableId] = { [column]: newState };
+            
+            // Update UI indicators
+            const headers = document.querySelectorAll(`[data-table="${tableId}"]`);
+            headers.forEach(header => {
+                const icon = header.querySelector('.sort-icon');
+                if (header.getAttribute('data-column') === column) {
+                    icon.classList.add('active');
+                    icon.textContent = newState === 'asc' ? '↑' : '↓';
+                } else {
+                    icon.classList.remove('active');
+                    icon.textContent = '⇅';
+                }
+            });
+            
+            // Get column index
+            const columnIndex = Array.from(headers).findIndex(h => h.getAttribute('data-column') === column);
+            
+            // Sort rows
+            rows.sort((a, b) => {
+                let aValue, bValue;
+                
+                // Get values based on column type
+                if (column === 'name') {
+                    aValue = a.getAttribute('data-name');
+                    bValue = b.getAttribute('data-name');
+                } else if (column === 'email') {
+                    aValue = a.getAttribute('data-email');
+                    bValue = b.getAttribute('data-email');
+                } else if (['score', 'scorePercent', 'matchPercent', 'date'].includes(column)) {
+                    const aCells = a.getElementsByTagName('td');
+                    const bCells = b.getElementsByTagName('td');
+                    aValue = parseFloat(aCells[columnIndex].getAttribute('data-sort-value') || 0);
+                    bValue = parseFloat(bCells[columnIndex].getAttribute('data-sort-value') || 0);
+                } else {
+                    const aCells = a.getElementsByTagName('td');
+                    const bCells = b.getElementsByTagName('td');
+                    aValue = aCells[columnIndex].textContent.trim();
+                    bValue = bCells[columnIndex].textContent.trim();
+                }
+                
+                // Compare values
+                if (typeof aValue === 'string') {
+                    return newState === 'asc' 
+                        ? aValue.localeCompare(bValue)
+                        : bValue.localeCompare(aValue);
+                } else {
+                    return newState === 'asc' 
+                        ? aValue - bValue
+                        : bValue - aValue;
+                }
+            });
+            
+            // Reorder rows in DOM
+            rows.forEach(row => tableBody.appendChild(row));
+        }
+
+        // Initialize search and sorting
+        document.addEventListener('DOMContentLoaded', function() {
+            // Setup search for both tables
+            setupSearch('searchRecommended', 'recommendedTableBody', 'recommendedNoResults');
+            setupSearch('searchOther', 'otherTableBody', 'otherNoResults');
+            
+            // Setup sorting for all headers
+            document.querySelectorAll('.sortable-header').forEach(header => {
+                header.addEventListener('click', function() {
+                    const column = this.getAttribute('data-column');
+                    const tableId = this.getAttribute('data-table');
+                    const tableBodyId = tableId === 'recommended' ? 'recommendedTableBody' : 'otherTableBody';
+                    sortTable(column, tableId, tableBodyId);
+                });
+            });
+        });
+    </script>
 {% endcall %}
 {% endblock %}
 

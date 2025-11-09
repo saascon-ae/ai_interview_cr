@@ -35,14 +35,14 @@ def login():
         else:
             flash('Invalid email or password', 'danger')
     
-    return render_template('auth/login.html')
+    return render_template('public/index.html')
 
 @auth_bp.route('/logout')
 @login_required
 def logout():
     logout_user()
     flash('You have been logged out successfully', 'success')
-    return redirect(url_for('auth.login'))
+    return redirect(url_for('public.index'))
 
 @auth_bp.route('/change-password', methods=['GET', 'POST'])
 @login_required

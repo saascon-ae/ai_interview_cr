@@ -1,0 +1,288 @@
+{% extends 'base.html' %}
+
+{% block title %}AI Prompts Management{% endblock %}
+
+{% block extra_css %}
+<style>
+.prompt-card {
+    background: var(--surface-color);
+    border-radius: var(--border-radius-lg);
+    padding: var(--spacing-6);
+    margin-bottom: var(--spacing-4);
+    border: 1px solid var(--border-color);
+    transition: box-shadow 0.2s ease;
+}
+
+.prompt-card:hover {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.prompt-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: var(--spacing-4);
+}
+
+.prompt-title {
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: var(--spacing-1);
+}
+
+.prompt-key {
+    font-family: 'Courier New', monospace;
+    font-size: 14px;
+    color: var(--text-secondary);
+    background: var(--bg-secondary);
+    padding: 2px 8px;
+    border-radius: 4px;
+}
+
+.prompt-description {
+    color: var(--text-secondary);
+    font-size: 14px;
+    line-height: 1.6;
+    margin-bottom: var(--spacing-4);
+}
+
+.prompt-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--spacing-3);
+    margin-bottom: var(--spacing-4);
+    padding: var(--spacing-3);
+    background: var(--bg-secondary);
+    border-radius: var(--border-radius);
+    font-size: 13px;
+}
+
+.meta-item {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-1);
+}
+
+.meta-label {
+    font-weight: 600;
+    color: var(--text-secondary);
+}
+
+.meta-value {
+    color: var(--text-primary);
+}
+
+.prompt-preview {
+    background: #f8f9fa;
+    padding: var(--spacing-3);
+    border-radius: var(--border-radius);
+    font-family: 'Courier New', monospace;
+    font-size: 13px;
+    color: #495057;
+    max-height: 150px;
+    overflow-y: auto;
+    white-space: pre-wrap;
+    word-break: break-word;
+    margin-bottom: var(--spacing-4);
+}
+
+.prompt-actions {
+    display: flex;
+    gap: var(--spacing-2);
+    flex-wrap: wrap;
+}
+
+.category-section {
+    margin-bottom: var(--spacing-8);
+}
+
+.category-header {
+    display: flex;
+    align-items: center;
+    margin-bottom: var(--spacing-4);
+    padding-bottom: var(--spacing-2);
+    border-bottom: 2px solid var(--border-color);
+}
+
+.category-title {
+    font-size: 24px;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin: 0;
+}
+
+.category-count {
+    background: var(--primary);
+    color: white;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 14px;
+    font-weight: 600;
+    margin-left: var(--spacing-2);
+}
+
+.badge-status {
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.badge-active {
+    background: #d4edda;
+    color: #155724;
+}
+
+.badge-inactive {
+    background: #f8d7da;
+    color: #721c24;
+}
+
+.empty-state {
+    text-align: center;
+    padding: var(--spacing-10);
+    color: var(--text-secondary);
+}
+
+.empty-state-icon {
+    font-size: 48px;
+    margin-bottom: var(--spacing-4);
+    opacity: 0.5;
+}
+
+@media (max-width: 768px) {
+    .prompt-header {
+        flex-direction: column;
+        gap: var(--spacing-3);
+    }
+    
+    .prompt-meta {
+        flex-direction: column;
+        gap: var(--spacing-2);
+    }
+    
+    .prompt-actions {
+        width: 100%;
+    }
+    
+    .prompt-actions .btn {
+        flex: 1;
+        justify-content: center;
+    }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container" style="padding-top: var(--spacing-8); padding-bottom: var(--spacing-8);">
+    <div class="page-header">
+        <div class="page-header-content">
+            <div>
+                <h1 class="page-title">AI Prompts Management</h1>
+                <p class="page-subtitle">Manage and customize AI prompts used throughout the system</p>
+            </div>
+            <div class="page-actions">
+                <a href="{{ url_for('super_admin.add_ai_prompt') }}" class="btn btn-primary">+ Add New Prompt</a>
+                <a href="{{ url_for('super_admin.dashboard') }}" class="btn btn-secondary">Back to Dashboard</a>
+            </div>
+        </div>
+    </div>
+    
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="alert alert-{{ category }}">{{ message }}</div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+    
+    {% if categories %}
+        {% for category, prompts in categories.items() %}
+        <div class="category-section">
+            <div class="category-header">
+                <h2 class="category-title">{{ category }}</h2>
+                <span class="category-count">{{ prompts|length }}</span>
+            </div>
+            
+            {% for prompt in prompts %}
+            <div class="prompt-card">
+                <div class="prompt-header">
+                    <div>
+                        <div class="prompt-title">{{ prompt.name }}</div>
+                        <span class="prompt-key">{{ prompt.key }}</span>
+                    </div>
+                    <span class="badge-status {% if prompt.is_active %}badge-active{% else %}badge-inactive{% endif %}">
+                        {% if prompt.is_active %}Active{% else %}Inactive{% endif %}
+                    </span>
+                </div>
+                
+                {% if prompt.description %}
+                <div class="prompt-description">
+                    <strong>Purpose:</strong> {{ prompt.description }}
+                </div>
+                {% endif %}
+                
+                <div class="prompt-meta">
+                    <div class="meta-item">
+                        <span class="meta-label">Model:</span>
+                        <span class="meta-value">{{ prompt.model }}</span>
+                    </div>
+                    <div class="meta-item">
+                        <span class="meta-label">Temperature:</span>
+                        <span class="meta-value">{{ prompt.temperature }}</span>
+                    </div>
+                    <div class="meta-item">
+                        <span class="meta-label">Last Updated:</span>
+                        <span class="meta-value">{{ prompt.updated_at.strftime('%Y-%m-%d %H:%M') if prompt.updated_at else 'N/A' }}</span>
+                    </div>
+                </div>
+                
+                {% if prompt.system_message %}
+                <div style="margin-bottom: var(--spacing-2);">
+                    <strong style="font-size: 14px; color: var(--text-secondary);">System Message:</strong>
+                </div>
+                <div class="prompt-preview">{{ prompt.system_message[:200] }}{% if prompt.system_message|length > 200 %}...{% endif %}</div>
+                {% endif %}
+                
+                <div style="margin-bottom: var(--spacing-2);">
+                    <strong style="font-size: 14px; color: var(--text-secondary);">Prompt Template:</strong>
+                </div>
+                <div class="prompt-preview">{{ prompt.prompt_template[:300] }}{% if prompt.prompt_template|length > 300 %}...{% endif %}</div>
+                
+                <div class="prompt-actions">
+                    <a href="{{ url_for('super_admin.edit_ai_prompt', prompt_id=prompt.id) }}" class="btn btn-sm btn-primary">
+                        <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16" style="margin-right: 4px;">
+                            <path d="M15.502 1.94a.5.5 0 0 1 0 .706L14.459 3.69l-2-2L13.502.646a.5.5 0 0 1 .707 0l1.293 1.293zm-1.75 2.456-2-2L4.939 9.21a.5.5 0 0 0-.121.196l-.805 2.414a.25.25 0 0 0 .316.316l2.414-.805a.5.5 0 0 0 .196-.12l6.813-6.814z"/>
+                            <path fill-rule="evenodd" d="M1 13.5A1.5 1.5 0 0 0 2.5 15h11a1.5 1.5 0 0 0 1.5-1.5v-6a.5.5 0 0 0-1 0v6a.5.5 0 0 1-.5.5h-11a.5.5 0 0 1-.5-.5v-11a.5.5 0 0 1 .5-.5H9a.5.5 0 0 0 0-1H2.5A1.5 1.5 0 0 0 1 2.5v11z"/>
+                        </svg>
+                        Edit
+                    </a>
+                    
+                    <form action="{{ url_for('super_admin.toggle_ai_prompt', prompt_id=prompt.id) }}" method="POST" style="display: inline;">
+                        <button type="submit" class="btn btn-sm {% if prompt.is_active %}btn-warning{% else %}btn-success{% endif %}">
+                            {% if prompt.is_active %}Deactivate{% else %}Activate{% endif %}
+                        </button>
+                    </form>
+                    
+                    <form action="{{ url_for('super_admin.delete_ai_prompt', prompt_id=prompt.id) }}" method="POST" 
+                          style="display: inline;" 
+                          onsubmit="return confirm('Are you sure you want to delete this prompt? This action cannot be undone.');">
+                        <button type="submit" class="btn btn-sm btn-danger">Delete</button>
+                    </form>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% endfor %}
+    {% else %}
+        <div class="empty-state">
+            <div class="empty-state-icon">🤖</div>
+            <h3>No AI Prompts Found</h3>
+            <p>Start by adding your first AI prompt to the system.</p>
+            <a href="{{ url_for('super_admin.add_ai_prompt') }}" class="btn btn-primary" style="margin-top: var(--spacing-4);">+ Add First Prompt</a>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}
+

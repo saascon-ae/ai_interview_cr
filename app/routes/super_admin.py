@@ -1,7 +1,7 @@
-from flask import Blueprint, render_template, redirect, url_for, flash, request, current_app
+from flask import Blueprint, render_template, redirect, url_for, flash, request, current_app, jsonify
 from flask_login import login_required, current_user
 from app import db
-from app.models import Organization, User, Job, Application, Candidate, Answer
+from app.models import Organization, User, Job, Application, Candidate, Answer, AIPrompt
 from app.utils.auth import super_admin_required, generate_password, generate_slug
 from app.utils.validators import save_uploaded_file
 from app.services.email_service import send_invitation_email
@@ -253,4 +253,100 @@ def delete_organization(org_id):
     db.session.commit()
     flash('Organization deleted successfully', 'success')
     return redirect(url_for('super_admin.dashboard'))
+
+@super_admin_bp.route('/ai-prompts')
+@login_required
+@super_admin_required
+def ai_prompts():
+    """Display all AI prompts"""
+    prompts = AIPrompt.query.order_by(AIPrompt.category, AIPrompt.name).all()
+    
+    # Group prompts by category
+    categories = {}
+    for prompt in prompts:
+        category = prompt.category or 'Other'
+        if category not in categories:
+            categories[category] = []
+        categories[category].append(prompt)
+    
+    return render_template('super_admin/ai_prompts.html', categories=categories)
+
+@super_admin_bp.route('/ai-prompts/edit/<int:prompt_id>', methods=['GET', 'POST'])
+@login_required
+@super_admin_required
+def edit_ai_prompt(prompt_id):
+    """Edit an AI prompt"""
+    prompt = AIPrompt.query.get_or_404(prompt_id)
+    
+    if request.method == 'POST':
+        prompt.name = request.form.get('name')
+        prompt.description = request.form.get('description')
+        prompt.system_message = request.form.get('system_message')
+        prompt.prompt_template = request.form.get('prompt_template')
+        prompt.model = request.form.get('model')
+        prompt.temperature = float(request.form.get('temperature', 0.5))
+        prompt.category = request.form.get('category')
+        prompt.is_active = request.form.get('is_active') == 'on'
+        
+        db.session.commit()
+        flash('AI Prompt updated successfully', 'success')
+        return redirect(url_for('super_admin.ai_prompts'))
+    
+    return render_template('super_admin/edit_ai_prompt.html', prompt=prompt)
+
+@super_admin_bp.route('/ai-prompts/add', methods=['GET', 'POST'])
+@login_required
+@super_admin_required
+def add_ai_prompt():
+    """Add a new AI prompt"""
+    if request.method == 'POST':
+        key = request.form.get('key')
+        
+        # Check if key already exists
+        if AIPrompt.query.filter_by(key=key).first():
+            flash('A prompt with this key already exists', 'danger')
+            return redirect(url_for('super_admin.add_ai_prompt'))
+        
+        prompt = AIPrompt(
+            key=key,
+            name=request.form.get('name'),
+            description=request.form.get('description'),
+            system_message=request.form.get('system_message'),
+            prompt_template=request.form.get('prompt_template'),
+            model=request.form.get('model', 'gpt-3.5-turbo'),
+            temperature=float(request.form.get('temperature', 0.5)),
+            category=request.form.get('category'),
+            is_active=request.form.get('is_active') == 'on'
+        )
+        
+        db.session.add(prompt)
+        db.session.commit()
+        flash('AI Prompt added successfully', 'success')
+        return redirect(url_for('super_admin.ai_prompts'))
+    
+    return render_template('super_admin/add_ai_prompt.html')
+
+@super_admin_bp.route('/ai-prompts/toggle/<int:prompt_id>', methods=['POST'])
+@login_required
+@super_admin_required
+def toggle_ai_prompt(prompt_id):
+    """Toggle AI prompt active status"""
+    prompt = AIPrompt.query.get_or_404(prompt_id)
+    prompt.is_active = not prompt.is_active
+    db.session.commit()
+    
+    status = 'activated' if prompt.is_active else 'deactivated'
+    flash(f'Prompt {status} successfully', 'success')
+    return redirect(url_for('super_admin.ai_prompts'))
+
+@super_admin_bp.route('/ai-prompts/delete/<int:prompt_id>', methods=['POST'])
+@login_required
+@super_admin_required
+def delete_ai_prompt(prompt_id):
+    """Delete an AI prompt"""
+    prompt = AIPrompt.query.get_or_404(prompt_id)
+    db.session.delete(prompt)
+    db.session.commit()
+    flash('AI Prompt deleted successfully', 'success')
+    return redirect(url_for('super_admin.ai_prompts'))
 

@@ -112,7 +112,7 @@ class Application(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     candidate_id = db.Column(db.Integer, db.ForeignKey('candidates.id'), nullable=False)
     job_id = db.Column(db.Integer, db.ForeignKey('jobs.id'), nullable=False)
-    status = db.Column(db.String(50), default='pending')  # pending, in_progress, completed
+    status = db.Column(db.String(50), default='pending')  # pending, in_progress, completed, shortlisted, rejected
     total_score = db.Column(db.Float, default=0.0)
     total_weightage = db.Column(db.Integer, default=0)
     personality_profile = db.Column(db.Text)
@@ -144,4 +144,23 @@ class Answer(db.Model):
     
     def __repr__(self):
         return f'<Answer {self.id} for Question {self.question_id}>'
+
+class AIPrompt(db.Model):
+    __tablename__ = 'ai_prompts'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    key = db.Column(db.String(100), unique=True, nullable=False)  # Unique identifier for the prompt
+    name = db.Column(db.String(255), nullable=False)  # Display name
+    description = db.Column(db.Text)  # Context/purpose of this prompt
+    system_message = db.Column(db.Text)  # System message for the AI
+    prompt_template = db.Column(db.Text, nullable=False)  # The actual prompt with placeholders
+    model = db.Column(db.String(50), default='gpt-3.5-turbo')  # AI model to use
+    temperature = db.Column(db.Float, default=0.5)  # Temperature setting
+    category = db.Column(db.String(50))  # e.g., 'question_generation', 'evaluation', 'analysis'
+    is_active = db.Column(db.Boolean, default=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    def __repr__(self):
+        return f'<AIPrompt {self.key}>'
 

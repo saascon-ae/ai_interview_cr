@@ -8,6 +8,98 @@ body {
     margin: 0;
     padding: 0;
 }
+
+.actions-cell {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.copy-url-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 8px;
+    color: var(--primary);
+    font-size: 18px;
+    transition: all 0.2s ease;
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+    height: 34px;
+    width: 34px;
+}
+
+.copy-url-btn svg {
+    transition: all 0.2s ease;
+}
+
+.copy-url-btn:hover {
+    color: var(--primary-dark);
+    background-color: rgba(105, 108, 255, 0.1);
+}
+
+.copy-url-btn:hover svg {
+    transform: scale(1.1);
+}
+
+.copy-url-btn.copied {
+    color: var(--success);
+}
+
+.copy-tooltip {
+    position: absolute;
+    top: -30px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(0, 0, 0, 0.8);
+    color: white;
+    padding: 5px 10px;
+    border-radius: 4px;
+    font-size: 12px;
+    white-space: nowrap;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s ease;
+}
+
+.copy-tooltip.show {
+    opacity: 1;
+}
+
+.btn-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 8px;
+    border: none;
+    background: none;
+    cursor: pointer;
+    border-radius: 4px;
+    transition: all 0.2s ease;
+    text-decoration: none;
+    height: 34px;
+    width: 34px;
+}
+
+.btn-edit {
+    color: var(--secondary, #6c757d);
+}
+
+.btn-edit:hover {
+    background-color: rgba(108, 117, 125, 0.1);
+    color: var(--secondary-dark, #5a6268);
+}
+
+.btn-edit svg {
+    transition: transform 0.2s ease;
+}
+
+.btn-edit:hover svg {
+    transform: scale(1.1);
+}
 </style>
 {% endblock %}
 
@@ -21,7 +113,14 @@ body {
                 <p class="page-subtitle">Manage your job postings</p>
             </div>
             <div class="page-actions">
-                <a href="{{ url_for('org_admin.new_job') }}" class="btn btn-primary">+ New Job</a>
+                <a href="{{ url_for('org_admin.new_job') }}" class="btn btn-primary btn-create">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <line x1="12" y1="8" x2="12" y2="16"></line>
+                        <line x1="8" y1="12" x2="16" y2="12"></line>
+                    </svg>
+                    New Job
+                </a>
             </div>
         </div>
     </div>
@@ -41,14 +140,32 @@ body {
             <tbody>
                 {% for job in jobs %}
                 <tr>
-                    <td><strong>{{ job.title }}</strong></td>
-                    <td>
+                    <td data-label="Job Title"><strong>{{ job.title }}</strong></td>
+                    <td data-label="Status">
                         <span class="status-badge status-{{ job.status }}">{{ job.status.capitalize() }}</span>
                     </td>
-                    <td>{{ job.published_at.strftime('%Y-%m-%d') if job.published_at else 'Not published' }}</td>
-                    <td><span class="badge badge-primary">{{ job.application_count }}</span></td>
-                    <td>
-                        <a href="{{ url_for('org_admin.edit_job', job_id=job.id) }}" class="btn btn-sm btn-secondary">Edit</a>
+                    <td data-label="Publish Date">{{ job.published_at.strftime('%d-%m-%Y') if job.published_at else 'Not published' }}</td>
+                    <td data-label="Applicants">
+                        <a href="{{ url_for('org_admin.applications', job_id=job.id) }}" class="badge badge-primary" title="View {{ job.application_count }} application{{ 's' if job.application_count != 1 else '' }}">
+                            {{ job.application_count }}
+                        </a>
+                    </td>
+                    <td data-label="Actions">
+                        <div class="actions-cell">
+                            <button type="button" class="copy-url-btn" data-url="{{ url_for('public.job_detail', org_slug=job.organization.slug, job_slug=job.public_url_slug, _external=True) }}" title="Copy Job URL">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path>
+                                    <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path>
+                                </svg>
+                                <span class="copy-tooltip">Copy URL</span>
+                            </button>
+                            <a href="{{ url_for('org_admin.edit_job', job_id=job.id) }}" class="btn-icon btn-edit" title="Edit Job">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                                    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                                </svg>
+                            </a>
+                        </div>
                     </td>
                 </tr>
                 {% endfor %}
@@ -61,5 +178,138 @@ body {
         {% endif %}
     </div>
 {% endcall %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('Copy URL script loaded');
+    const copyButtons = document.querySelectorAll('.copy-url-btn');
+    console.log('Found ' + copyButtons.length + ' copy buttons');
+    
+    copyButtons.forEach(function(button) {
+        // Add click event listener
+        button.addEventListener('click', function(e) {
+            console.log('Copy button clicked!');
+            e.preventDefault();
+            e.stopPropagation();
+            
+            const url = this.getAttribute('data-url');
+            console.log('URL to copy:', url);
+            const tooltip = this.querySelector('.copy-tooltip');
+            
+            if (!url) {
+                console.error('No URL found in data-url attribute');
+                alert('Error: No URL to copy');
+                return;
+            }
+            
+            if (!tooltip) {
+                console.error('Tooltip element not found');
+                return;
+            }
+            
+            const originalText = tooltip.textContent;
+            
+            // Try to copy using the most reliable method
+            copyToClipboard(url, button, tooltip, originalText);
+        });
+        
+        // Add hover effects
+        button.addEventListener('mouseenter', function() {
+            const tooltip = this.querySelector('.copy-tooltip');
+            if (tooltip && tooltip.textContent === 'Copy URL') {
+                tooltip.classList.add('show');
+            }
+        });
+        
+        button.addEventListener('mouseleave', function() {
+            const tooltip = this.querySelector('.copy-tooltip');
+            if (tooltip && tooltip.textContent === 'Copy URL') {
+                tooltip.classList.remove('show');
+            }
+        });
+    });
+});
+
+function copyToClipboard(url, button, tooltip, originalText) {
+    console.log('Attempting to copy:', url);
+    // Method 1: Try modern Clipboard API
+    if (navigator.clipboard && window.isSecureContext) {
+        console.log('Using Clipboard API');
+        navigator.clipboard.writeText(url)
+            .then(function() {
+                console.log('Clipboard API success!');
+                showSuccess(button, tooltip, originalText);
+            })
+            .catch(function(err) {
+                console.log('Clipboard API failed, trying fallback...', err);
+                fallbackCopy(url, button, tooltip, originalText);
+            });
+    } else {
+        console.log('Clipboard API not available, using fallback');
+        // Use fallback method immediately
+        fallbackCopy(url, button, tooltip, originalText);
+    }
+}
+
+function fallbackCopy(url, button, tooltip, originalText) {
+    console.log('Using fallback copy method');
+    // Create a temporary textarea
+    const textArea = document.createElement('textarea');
+    textArea.value = url;
+    
+    // Make it invisible and non-interactive
+    textArea.style.position = 'fixed';
+    textArea.style.top = '0';
+    textArea.style.left = '0';
+    textArea.style.width = '2em';
+    textArea.style.height = '2em';
+    textArea.style.padding = '0';
+    textArea.style.border = 'none';
+    textArea.style.outline = 'none';
+    textArea.style.boxShadow = 'none';
+    textArea.style.background = 'transparent';
+    textArea.setAttribute('readonly', '');
+    
+    document.body.appendChild(textArea);
+    
+    // Select and copy
+    textArea.focus();
+    textArea.select();
+    
+    try {
+        const successful = document.execCommand('copy');
+        console.log('execCommand result:', successful);
+        if (successful) {
+            showSuccess(button, tooltip, originalText);
+        } else {
+            showError(url);
+        }
+    } catch (err) {
+        console.error('Copy failed:', err);
+        showError(url);
+    } finally {
+        document.body.removeChild(textArea);
+    }
+}
+
+function showSuccess(button, tooltip, originalText) {
+    console.log('Showing success feedback');
+    button.classList.add('copied');
+    tooltip.textContent = 'Copied!';
+    tooltip.classList.add('show');
+    
+    setTimeout(function() {
+        button.classList.remove('copied');
+        tooltip.textContent = originalText;
+        // Don't remove 'show' class if user is still hovering
+    }, 2000);
+}
+
+function showError(url) {
+    alert('Could not copy automatically. Please copy this URL manually:\n\n' + url);
+}
+</script>
 {% endblock %}
 

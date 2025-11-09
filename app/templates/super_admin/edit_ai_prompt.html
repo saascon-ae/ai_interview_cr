@@ -1,0 +1,298 @@
+{% extends 'base.html' %}
+
+{% block title %}Edit AI Prompt{% endblock %}
+
+{% block extra_css %}
+<style>
+.form-section {
+    background: var(--surface-color);
+    border-radius: var(--border-radius-lg);
+    padding: var(--spacing-6);
+    margin-bottom: var(--spacing-4);
+    border: 1px solid var(--border-color);
+}
+
+.form-section-title {
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: var(--spacing-4);
+    padding-bottom: var(--spacing-2);
+    border-bottom: 2px solid var(--border-color);
+}
+
+.help-text {
+    font-size: 13px;
+    color: var(--text-secondary);
+    margin-top: var(--spacing-1);
+    line-height: 1.5;
+}
+
+.code-editor {
+    font-family: 'Courier New', monospace;
+    font-size: 14px;
+    line-height: 1.6;
+    resize: vertical;
+}
+
+.variable-hint {
+    background: #e7f3ff;
+    border-left: 3px solid #0066cc;
+    padding: var(--spacing-3);
+    margin-top: var(--spacing-2);
+    border-radius: var(--border-radius);
+    font-size: 13px;
+}
+
+.variable-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--spacing-2);
+    margin-top: var(--spacing-2);
+}
+
+.variable-tag {
+    background: #f8f9fa;
+    padding: 4px 10px;
+    border-radius: 4px;
+    font-family: 'Courier New', monospace;
+    font-size: 12px;
+    color: #495057;
+    border: 1px solid #dee2e6;
+}
+
+.toggle-switch {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-2);
+    margin-top: var(--spacing-2);
+}
+
+.switch {
+    position: relative;
+    display: inline-block;
+    width: 50px;
+    height: 24px;
+}
+
+.switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #ccc;
+    transition: .4s;
+    border-radius: 24px;
+}
+
+.slider:before {
+    position: absolute;
+    content: "";
+    height: 18px;
+    width: 18px;
+    left: 3px;
+    bottom: 3px;
+    background-color: white;
+    transition: .4s;
+    border-radius: 50%;
+}
+
+input:checked + .slider {
+    background-color: var(--primary);
+}
+
+input:checked + .slider:before {
+    transform: translateX(26px);
+}
+
+.form-actions {
+    display: flex;
+    gap: var(--spacing-2);
+    margin-top: var(--spacing-6);
+}
+
+@media (max-width: 768px) {
+    .form-actions {
+        flex-direction: column;
+    }
+    
+    .form-actions .btn {
+        width: 100%;
+    }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container" style="padding-top: var(--spacing-8); padding-bottom: var(--spacing-8);">
+    <div class="page-header">
+        <div class="page-header-content">
+            <div>
+                <h1 class="page-title">Edit AI Prompt</h1>
+                <p class="page-subtitle">Customize the AI prompt configuration</p>
+            </div>
+            <div class="page-actions">
+                <a href="{{ url_for('super_admin.ai_prompts') }}" class="btn btn-secondary">Back to Prompts</a>
+            </div>
+        </div>
+    </div>
+    
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="alert alert-{{ category }}">{{ message }}</div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+    
+    <form method="POST" action="{{ url_for('super_admin.edit_ai_prompt', prompt_id=prompt.id) }}">
+        <!-- Basic Information -->
+        <div class="form-section">
+            <h2 class="form-section-title">Basic Information</h2>
+            
+            <div class="form-group">
+                <label for="name" class="form-label required">Prompt Name</label>
+                <input type="text" class="form-control" id="name" name="name" 
+                       value="{{ prompt.name }}" required>
+                <div class="help-text">A descriptive name for this prompt</div>
+            </div>
+            
+            <div class="form-group">
+                <label for="description" class="form-label">Description / Purpose</label>
+                <textarea class="form-control" id="description" name="description" 
+                          rows="3">{{ prompt.description or '' }}</textarea>
+                <div class="help-text">Explain what this prompt does and when it's used</div>
+            </div>
+            
+            <div class="form-group">
+                <label for="category" class="form-label">Category</label>
+                <select class="form-control" id="category" name="category">
+                    <option value="Question Generation" {% if prompt.category == 'Question Generation' %}selected{% endif %}>Question Generation</option>
+                    <option value="Answer Evaluation" {% if prompt.category == 'Answer Evaluation' %}selected{% endif %}>Answer Evaluation</option>
+                    <option value="CV Analysis" {% if prompt.category == 'CV Analysis' %}selected{% endif %}>CV Analysis</option>
+                    <option value="Profile Generation" {% if prompt.category == 'Profile Generation' %}selected{% endif %}>Profile Generation</option>
+                    <option value="Other" {% if prompt.category == 'Other' %}selected{% endif %}>Other</option>
+                </select>
+                <div class="help-text">Categorize this prompt for better organization</div>
+            </div>
+        </div>
+        
+        <!-- AI Configuration -->
+        <div class="form-section">
+            <h2 class="form-section-title">AI Configuration</h2>
+            
+            <div class="form-group">
+                <label for="model" class="form-label required">AI Model</label>
+                <select class="form-control" id="model" name="model" required>
+                    <option value="gpt-4o" {% if prompt.model == 'gpt-4o' %}selected{% endif %}>GPT-4o (Most Capable)</option>
+                    <option value="gpt-4o-mini" {% if prompt.model == 'gpt-4o-mini' %}selected{% endif %}>GPT-4o Mini (Fast & Efficient)</option>
+                    <option value="gpt-4-turbo" {% if prompt.model == 'gpt-4-turbo' %}selected{% endif %}>GPT-4 Turbo</option>
+                    <option value="gpt-4" {% if prompt.model == 'gpt-4' %}selected{% endif %}>GPT-4</option>
+                    <option value="gpt-3.5-turbo" {% if prompt.model == 'gpt-3.5-turbo' %}selected{% endif %}>GPT-3.5 Turbo (Cost Effective)</option>
+                </select>
+                <div class="help-text">Choose the AI model to use for this prompt</div>
+            </div>
+            
+            <div class="form-group">
+                <label for="temperature" class="form-label required">Temperature</label>
+                <input type="number" class="form-control" id="temperature" name="temperature" 
+                       min="0" max="2" step="0.1" value="{{ prompt.temperature }}" required>
+                <div class="help-text">
+                    Controls randomness: 0 = deterministic, 2 = very creative. 
+                    Recommended: 0.3 for scoring, 0.5-0.7 for generation
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label">Status</label>
+                <div class="toggle-switch">
+                    <label class="switch">
+                        <input type="checkbox" id="is_active" name="is_active" 
+                               {% if prompt.is_active %}checked{% endif %}>
+                        <span class="slider"></span>
+                    </label>
+                    <label for="is_active" style="cursor: pointer; user-select: none;">
+                        Prompt is Active
+                    </label>
+                </div>
+                <div class="help-text">Only active prompts will be used by the system</div>
+            </div>
+        </div>
+        
+        <!-- System Message -->
+        <div class="form-section">
+            <h2 class="form-section-title">System Message</h2>
+            
+            <div class="form-group">
+                <label for="system_message" class="form-label">System Message</label>
+                <textarea class="form-control code-editor" id="system_message" name="system_message" 
+                          rows="4">{{ prompt.system_message or '' }}</textarea>
+                <div class="help-text">
+                    Sets the behavior and role of the AI assistant. This defines how the AI should act.
+                </div>
+            </div>
+        </div>
+        
+        <!-- Prompt Template -->
+        <div class="form-section">
+            <h2 class="form-section-title">Prompt Template</h2>
+            
+            <div class="form-group">
+                <label for="prompt_template" class="form-label required">Prompt Template</label>
+                <textarea class="form-control code-editor" id="prompt_template" name="prompt_template" 
+                          rows="15" required>{{ prompt.prompt_template }}</textarea>
+                <div class="help-text">
+                    The main prompt sent to the AI. Use placeholders in curly braces like {variable_name}
+                </div>
+                
+                <div class="variable-hint">
+                    <strong>💡 Common Variables by Prompt Type:</strong>
+                    <div style="margin-top: var(--spacing-2);">
+                        <div><strong>Question Generation:</strong></div>
+                        <div class="variable-list">
+                            <span class="variable-tag">{job_description}</span>
+                        </div>
+                    </div>
+                    <div style="margin-top: var(--spacing-2);">
+                        <div><strong>CV Analysis:</strong></div>
+                        <div class="variable-list">
+                            <span class="variable-tag">{job_description}</span>
+                            <span class="variable-tag">{cv_text}</span>
+                        </div>
+                    </div>
+                    <div style="margin-top: var(--spacing-2);">
+                        <div><strong>Answer Evaluation:</strong></div>
+                        <div class="variable-list">
+                            <span class="variable-tag">{question_text}</span>
+                            <span class="variable-tag">{answer_text}</span>
+                            <span class="variable-tag">{question_weightage}</span>
+                        </div>
+                    </div>
+                    <div style="margin-top: var(--spacing-2);">
+                        <div><strong>Personality Profile:</strong></div>
+                        <div class="variable-list">
+                            <span class="variable-tag">{cv_summary}</span>
+                            <span class="variable-tag">{answers_text}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Form Actions -->
+        <div class="form-actions">
+            <button type="submit" class="btn btn-primary">Save Changes</button>
+            <a href="{{ url_for('super_admin.ai_prompts') }}" class="btn btn-secondary">Cancel</a>
+        </div>
+    </form>
+</div>
+{% endblock %}
+

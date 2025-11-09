@@ -83,9 +83,11 @@ def handle_start_interview(data):
 @socketio.on('answer_submitted', namespace='/interview')
 def handle_answer_submitted(data):
     """Process submitted answer"""
+    print(f"[DEBUG] Answer submitted - data: {data.keys() if data else 'None'}")
     session_data = active_sessions.get(request.sid)
     
     if not session_data:
+        print(f"[DEBUG] No active session for sid: {request.sid}")
         emit('error', {'message': 'No active session'})
         return
     
@@ -94,6 +96,35 @@ def handle_answer_submitted(data):
     audio_data = data.get('audio_data')  # Base64 encoded audio
     answer_text = data.get('answer_text', '')
     duration = data.get('duration')  # Duration in seconds
+    
+    print(f"[DEBUG] Processing answer - app_id: {application_id}, question_id: {question_id}")
+    
+    # Validate that this is the expected question
+    current_index = session_data['current_index']
+    if current_index >= len(session_data['questions']):
+        print(f"[DEBUG] Current index {current_index} >= questions length {len(session_data['questions'])}")
+        emit('error', {'message': 'No more questions available'})
+        return
+    
+    expected_question_id = session_data['questions'][current_index]
+    print(f"[DEBUG] Expected question_id: {expected_question_id}, Received: {question_id}")
+    if expected_question_id != question_id:
+        print(f"[DEBUG] Question mismatch!")
+        emit('error', {'message': 'Question mismatch. Please refresh the page to continue.'})
+        return
+    
+    # Check if answer already exists for this question to prevent duplicates
+    existing_answer = Answer.query.filter_by(
+        application_id=application_id,
+        question_id=question_id
+    ).first()
+    
+    if existing_answer:
+        print(f"[DEBUG] Duplicate answer detected for question_id: {question_id}")
+        emit('error', {'message': 'Answer already submitted for this question'})
+        return
+    
+    print(f"[DEBUG] No duplicate found, proceeding with answer processing")
     
     # Save audio file if provided
     audio_path = None
@@ -116,6 +147,11 @@ def handle_answer_submitted(data):
                     'question_id': question_id,
                     'transcript': answer_text
                 })
+    
+    # Validate that we have answer text (either from transcription or typed)
+    if not answer_text or answer_text == "[Transcription failed]":
+        # If no valid answer text, use a default
+        answer_text = "[No answer provided]"
     
     # Get question
     question = Question.query.get(question_id)
@@ -159,12 +195,14 @@ def handle_answer_submitted(data):
     # Move to next question
     session_data['current_index'] += 1
     current_index = session_data['current_index']
+    print(f"[DEBUG] Answer processed successfully. Moving to index: {current_index}")
     
     if current_index < len(session_data['questions']):
         # Send next question
         next_question_id = session_data['questions'][current_index]
         next_question = Question.query.get(next_question_id)
         
+        print(f"[DEBUG] Sending next question - number: {current_index + 1}, id: {next_question.id}")
         emit('question', {
             'question_id': next_question.id,
             'text': next_question.text,
@@ -209,6 +247,16 @@ def handle_skip_question(data):
     expected_question_id = session_data['questions'][current_index]
     if expected_question_id != question_id:
         emit('error', {'message': 'Question mismatch'})
+        return
+    
+    # Check if answer already exists for this question to prevent duplicates
+    existing_answer = Answer.query.filter_by(
+        application_id=application_id,
+        question_id=question_id
+    ).first()
+    
+    if existing_answer:
+        emit('error', {'message': 'Question already answered or skipped'})
         return
     
     question = Question.query.get(question_id)

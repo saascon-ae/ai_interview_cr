@@ -88,7 +88,7 @@
                 </div>
                 <div class="job-meta">
                     <span class="job-meta-item">
-                        📅 Posted: {{ job.published_at.strftime('%B %d, %Y') if job.published_at else 'Recently' }}
+                        📅 Posted: {{ job.published_at.strftime('%d-%m-%Y') if job.published_at else 'Recently' }}
                     </span>
                 </div>
                 <a href="{{ url_for('public.job_detail', org_slug=organization.slug, job_slug=job.public_url_slug) }}" class="btn btn-primary">View Details & Apply</a>
