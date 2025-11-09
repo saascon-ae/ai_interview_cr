@@ -1,0 +1,53 @@
+{% extends 'org_admin/dashboard.html' %}
+
+{% block content %}
+<div class="layout">
+    <div class="top-bar">
+        <div class="logo">
+            {% if current_user.organization.logo_path %}
+                <img src="{{ url_for('static', filename=current_user.organization.logo_path) }}" alt="Logo">
+            {% else %}
+                <h2>{{ current_user.organization.name }}</h2>
+            {% endif %}
+        </div>
+        <div style="margin-left: auto;">
+            <a href="{{ url_for('auth.logout') }}" class="btn btn-secondary">Logout</a>
+        </div>
+    </div>
+    
+    <div class="main-content">
+        <div class="sidebar">
+            <a href="{{ url_for('org_admin.dashboard') }}">Dashboard</a>
+            <a href="{{ url_for('org_admin.jobs') }}" class="active">Jobs</a>
+            <a href="{{ url_for('org_admin.applications') }}">Applications</a>
+            <a href="{{ url_for('org_admin.manage_team') }}">Team</a>
+        </div>
+        
+        <div class="content-area">
+            <div style="margin-bottom: 20px;">
+                <a href="{{ url_for('org_admin.jobs') }}" class="btn btn-secondary">&larr; Back to Jobs</a>
+            </div>
+            
+            <div class="card">
+                <h2>Create New Job</h2>
+                
+                <form method="POST">
+                    <div class="form-group">
+                        <label for="title">Job Title *</label>
+                        <input type="text" id="title" name="title" class="form-control" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="description">Job Description *</label>
+                        <textarea id="description" name="description" class="form-control" rows="10" required></textarea>
+                        <small>You can use HTML for formatting</small>
+                    </div>
+                    
+                    <button type="submit" class="btn">Create Job</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+

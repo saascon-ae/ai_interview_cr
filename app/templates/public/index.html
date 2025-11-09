@@ -1,0 +1,79 @@
+{% extends 'base.html' %}
+
+{% block title %}HR Interview Platform{% endblock %}
+
+{% block extra_css %}
+<style>
+    .hero {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        text-align: center;
+        padding: 100px 20px;
+    }
+    
+    .hero h1 {
+        font-size: 48px;
+        margin-bottom: 20px;
+    }
+    
+    .hero p {
+        font-size: 24px;
+        margin-bottom: 30px;
+    }
+    
+    .features {
+        padding: 80px 20px;
+        background: white;
+    }
+    
+    .features-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 40px;
+        max-width: 1200px;
+        margin: 0 auto;
+    }
+    
+    .feature-item {
+        text-align: center;
+    }
+    
+    .feature-item h3 {
+        color: #4CAF50;
+        font-size: 24px;
+        margin-bottom: 15px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="hero">
+    <h1>AI-Powered HR Interview Platform</h1>
+    <p>Streamline your hiring process with intelligent pre-screening interviews</p>
+</div>
+
+<div class="features">
+    <div class="features-grid">
+        <div class="feature-item">
+            <h3>🤖 AI-Powered</h3>
+            <p>Automated question generation and candidate evaluation using advanced AI</p>
+        </div>
+        
+        <div class="feature-item">
+            <h3>🎙️ Voice Interviews</h3>
+            <p>Real-time voice-based interviews for natural candidate interaction</p>
+        </div>
+        
+        <div class="feature-item">
+            <h3>📊 Smart Matching</h3>
+            <p>Intelligent CV analysis and job matching algorithms</p>
+        </div>
+        
+        <div class="feature-item">
+            <h3>📈 Comprehensive Reports</h3>
+            <p>Detailed candidate profiles with personality insights</p>
+        </div>
+    </div>
+</div>
+{% endblock %}
+

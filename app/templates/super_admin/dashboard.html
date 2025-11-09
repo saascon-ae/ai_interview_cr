@@ -1,0 +1,163 @@
+{% extends 'base.html' %}
+
+{% block title %}Super Admin Dashboard{% endblock %}
+
+{% block extra_css %}
+<style>
+    .header {
+        background: white;
+        padding: 20px;
+        margin-bottom: 20px;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    
+    .header h1 {
+        color: #333;
+        font-size: 28px;
+    }
+    
+    .actions {
+        display: flex;
+        gap: 10px;
+    }
+    
+    .table-container {
+        background: white;
+        border-radius: 8px;
+        padding: 20px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        overflow-x: auto;
+    }
+    
+    table {
+        width: 100%;
+        border-collapse: collapse;
+        min-width: 1000px;
+    }
+    
+    table th {
+        text-align: left;
+        padding: 12px;
+        background-color: #f8f9fa;
+        font-weight: 600;
+        border-bottom: 2px solid #dee2e6;
+    }
+    
+    table td {
+        padding: 12px;
+        border-bottom: 1px solid #dee2e6;
+    }
+    
+    table tr:hover {
+        background-color: #f8f9fa;
+    }
+    
+    .status-badge {
+        display: inline-block;
+        padding: 4px 12px;
+        border-radius: 12px;
+        font-size: 12px;
+        font-weight: 600;
+    }
+    
+    .status-active {
+        background-color: #d4edda;
+        color: #155724;
+    }
+    
+    .status-inactive {
+        background-color: #f8d7da;
+        color: #721c24;
+    }
+    
+    .action-buttons {
+        display: flex;
+        gap: 5px;
+    }
+    
+    .btn-sm {
+        padding: 5px 10px;
+        font-size: 14px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="header">
+        <h1>Super Admin Dashboard</h1>
+        <div class="actions">
+            <a href="{{ url_for('super_admin.add_organization') }}" class="btn">Add Organization</a>
+            <a href="{{ url_for('auth.logout') }}" class="btn btn-secondary">Logout</a>
+        </div>
+    </div>
+    
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="alert alert-{{ category }}">{{ message }}</div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+    
+    <div class="table-container">
+        <h2 style="margin-bottom: 20px;">Organizations</h2>
+        
+        {% if org_stats %}
+        <table>
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Email</th>
+                    <th>Contact Person</th>
+                    <th>Total Jobs</th>
+                    <th>Total Candidates</th>
+                    <th>CV Storage</th>
+                    <th>Audio Storage</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for stat in org_stats %}
+                <tr>
+                    <td><strong>{{ stat.organization.name }}</strong></td>
+                    <td>{{ stat.organization.email }}</td>
+                    <td>{{ stat.organization.first_name }} {{ stat.organization.last_name }}</td>
+                    <td>{{ stat.total_jobs }}</td>
+                    <td>{{ stat.total_candidates }}</td>
+                    <td>{{ stat.cv_total_size }}</td>
+                    <td>{{ stat.audio_total_size }}</td>
+                    <td>
+                        <span class="status-badge status-{{ stat.organization.status }}">
+                            {{ stat.organization.status.capitalize() }}
+                        </span>
+                    </td>
+                    <td>
+                        <div class="action-buttons">
+                            <a href="{{ url_for('super_admin.edit_organization', org_id=stat.organization.id) }}" class="btn btn-sm btn-secondary">Edit</a>
+                            <form method="POST" action="{{ url_for('super_admin.send_invite', org_id=stat.organization.id) }}" style="display: inline;">
+                                <button type="submit" class="btn btn-sm">Send Invite</button>
+                            </form>
+                            <a href="{{ url_for('super_admin.toggle_organization_status', org_id=stat.organization.id) }}" 
+                               class="btn btn-sm" 
+                               onclick="return confirm('Are you sure?')">
+                                {{ 'Activate' if stat.organization.status == 'inactive' else 'Deactivate' }}
+                            </a>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <p>No organizations found. <a href="{{ url_for('super_admin.add_organization') }}">Add your first organization</a></p>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+

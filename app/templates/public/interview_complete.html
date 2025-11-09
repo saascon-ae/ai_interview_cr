@@ -1,0 +1,57 @@
+{% extends 'base.html' %}
+
+{% block title %}Interview Complete{% endblock %}
+
+{% block extra_css %}
+<style>
+    .complete-container {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        min-height: 100vh;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    }
+    
+    .complete-card {
+        background: white;
+        padding: 60px 40px;
+        border-radius: 10px;
+        box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+        text-align: center;
+        max-width: 600px;
+    }
+    
+    .success-icon {
+        font-size: 80px;
+        color: #4CAF50;
+        margin-bottom: 20px;
+    }
+    
+    .complete-card h1 {
+        color: #333;
+        margin-bottom: 20px;
+    }
+    
+    .complete-card p {
+        color: #666;
+        font-size: 18px;
+        line-height: 1.6;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="complete-container">
+    <div class="complete-card">
+        <div class="success-icon">✓</div>
+        <h1>Thank You For Your Time!</h1>
+        <p>We truly appreciate you sharing your story with us.</p>
+        <p>Our hiring team is carefully reviewing your application and interview responses. If we move forward together, we’ll be in touch with the next steps.</p>
+        <p style="margin-top: 30px; font-size: 16px;">
+            <strong>What's Next?</strong><br>
+            You’ll receive a confirmation email shortly. Keep an eye on your inbox — we’ll reach out if you’re being considered for the next phase.
+        </p>
+    </div>
+</div>
+{% endblock %}
+

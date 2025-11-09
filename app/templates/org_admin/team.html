@@ -1,0 +1,100 @@
+{% extends 'org_admin/dashboard.html' %}
+
+{% block content %}
+<div class="layout">
+    <div class="top-bar">
+        <div class="logo">
+            {% if current_user.organization.logo_path %}
+                <img src="{{ url_for('static', filename=current_user.organization.logo_path) }}" alt="Logo">
+            {% else %}
+                <h2>{{ current_user.organization.name }}</h2>
+            {% endif %}
+        </div>
+        <div style="margin-left: auto;">
+            <a href="{{ url_for('auth.logout') }}" class="btn btn-secondary">Logout</a>
+        </div>
+    </div>
+    
+    <div class="main-content">
+        <div class="sidebar">
+            <a href="{{ url_for('org_admin.dashboard') }}">Dashboard</a>
+            <a href="{{ url_for('org_admin.jobs') }}">Jobs</a>
+            <a href="{{ url_for('org_admin.applications') }}">Applications</a>
+            <a href="{{ url_for('org_admin.manage_team') }}" class="active">Team</a>
+        </div>
+        
+        <div class="content-area">
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ category }}">{{ message }}</div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+            
+            <h1 style="margin-bottom: 20px;">Manage Team</h1>
+            
+            <div class="card">
+                <h2 style="margin-bottom: 15px;">Invite New Team Member</h2>
+                <form method="POST" action="{{ url_for('org_admin.manage_team') }}">
+                    <div class="form-group">
+                        <label for="first_name">First Name *</label>
+                        <input type="text" id="first_name" name="first_name" class="form-control" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="last_name">Last Name *</label>
+                        <input type="text" id="last_name" name="last_name" class="form-control" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="email">Work Email *</label>
+                        <input type="email" id="email" name="email" class="form-control" required>
+                    </div>
+                    
+                    <button type="submit" class="btn">Send Invite</button>
+                </form>
+                <p style="margin-top: 10px; color: #666; font-size: 14px;">
+                    Invited users receive a temporary password and must reset it on first login.
+                </p>
+            </div>
+            
+            <div class="card">
+                <h2 style="margin-bottom: 15px;">Current Team Members</h2>
+                {% if team_members %}
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Email</th>
+                            <th>Status</th>
+                            <th>Must Reset Password</th>
+                            <th>Added</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for member in team_members %}
+                        <tr>
+                            <td>{{ member.first_name }} {{ member.last_name }}</td>
+                            <td>{{ member.email }}</td>
+                            <td>
+                                <span class="status-badge status-{{ 'active' if member.is_active else 'inactive' }}">
+                                    {{ 'Active' if member.is_active else 'Inactive' }}
+                                </span>
+                            </td>
+                            <td>{{ 'Yes' if member.must_change_password else 'No' }}</td>
+                            <td>{{ member.created_at.strftime('%Y-%m-%d') }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                {% else %}
+                <p>No team members yet. Invite your first teammate above.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+

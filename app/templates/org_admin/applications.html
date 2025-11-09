@@ -1,0 +1,120 @@
+{% extends 'org_admin/dashboard.html' %}
+
+{% block content %}
+<div class="layout">
+    <div class="top-bar">
+        <div class="logo">
+            {% if current_user.organization.logo_path %}
+                <img src="{{ url_for('static', filename=current_user.organization.logo_path) }}" alt="Logo">
+            {% else %}
+                <h2>{{ current_user.organization.name }}</h2>
+            {% endif %}
+        </div>
+        <div style="margin-left: auto;">
+            <a href="{{ url_for('auth.logout') }}" class="btn btn-secondary">Logout</a>
+        </div>
+    </div>
+    
+    <div class="main-content">
+        <div class="sidebar">
+            <a href="{{ url_for('org_admin.dashboard') }}">Dashboard</a>
+            <a href="{{ url_for('org_admin.jobs') }}">Jobs</a>
+            <a href="{{ url_for('org_admin.applications') }}" class="active">Applications</a>
+            <a href="{{ url_for('org_admin.manage_team') }}">Team</a>
+        </div>
+        
+        <div class="content-area">
+            <h1 style="margin-bottom: 30px;">Applications</h1>
+            
+            <div class="card" style="margin-bottom: 30px;">
+                <h3 style="margin-bottom: 20px;">Recommended Candidates</h3>
+                {% if recommended_applications %}
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Candidate Name</th>
+                            <th>Email</th>
+                            <th>Phone</th>
+                            <th>Job Title</th>
+                            <th>Status</th>
+                            <th>Score</th>
+                            <th>Score %</th>
+                            <th>Match %</th>
+                            <th>Applied Date</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for app in recommended_applications %}
+                        <tr>
+                            <td><strong>{{ app.candidate.first_name }} {{ app.candidate.last_name }}</strong></td>
+                            <td>{{ app.candidate.email }}</td>
+                            <td>{{ app.candidate.phone or 'N/A' }}</td>
+                            <td>{{ app.job.title }}</td>
+                            <td>
+                                <span class="status-badge status-{{ app.status }}">{{ app.status.capitalize() }}</span>
+                            </td>
+                            <td>{{ '%.1f' % app.total_score }} / {{ app.total_weightage }}</td>
+                            <td>{{ '%.1f' % app.score_percentage }}%</td>
+                            <td>{{ '%.1f' % app.candidate.matching_percentage if app.candidate.matching_percentage else 'N/A' }}%</td>
+                            <td>{{ app.created_at.strftime('%Y-%m-%d') }}</td>
+                            <td>
+                                <a href="{{ url_for('org_admin.view_application', application_id=app.id) }}" class="btn btn-sm btn-secondary">View</a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                {% else %}
+                <p>No candidates have reached the recommended threshold yet.</p>
+                {% endif %}
+            </div>
+
+            <div class="card">
+                <h3 style="margin-bottom: 20px;">Other Candidates</h3>
+                {% if other_applications %}
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Candidate Name</th>
+                            <th>Email</th>
+                            <th>Phone</th>
+                            <th>Job Title</th>
+                            <th>Status</th>
+                            <th>Score</th>
+                            <th>Score %</th>
+                            <th>Match %</th>
+                            <th>Applied Date</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for app in other_applications %}
+                        <tr>
+                            <td><strong>{{ app.candidate.first_name }} {{ app.candidate.last_name }}</strong></td>
+                            <td>{{ app.candidate.email }}</td>
+                            <td>{{ app.candidate.phone or 'N/A' }}</td>
+                            <td>{{ app.job.title }}</td>
+                            <td>
+                                <span class="status-badge status-{{ app.status }}">{{ app.status.capitalize() }}</span>
+                            </td>
+                            <td>{{ '%.1f' % app.total_score }} / {{ app.total_weightage }}</td>
+                            <td>{{ '%.1f' % app.score_percentage }}%</td>
+                            <td>{{ '%.1f' % app.candidate.matching_percentage if app.candidate.matching_percentage else 'N/A' }}%</td>
+                            <td>{{ app.created_at.strftime('%Y-%m-%d') }}</td>
+                            <td>
+                                <a href="{{ url_for('org_admin.view_application', application_id=app.id) }}" class="btn btn-sm btn-secondary">View</a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                {% else %}
+                <p>No other candidates at this time.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+

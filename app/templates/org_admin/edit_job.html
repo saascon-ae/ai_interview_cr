@@ -1,0 +1,184 @@
+{% extends 'org_admin/dashboard.html' %}
+
+{% block extra_css %}
+{{ super() }}
+<style>
+    .question-item {
+        background: #f9f9f9;
+        padding: 15px;
+        margin-bottom: 10px;
+        border-radius: 4px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    
+    .question-text {
+        flex: 1;
+    }
+    
+    .question-actions {
+        display: flex;
+        gap: 5px;
+    }
+    
+    .job-url {
+        background: #e3f2fd;
+        padding: 15px;
+        border-radius: 4px;
+        margin-top: 20px;
+    }
+    
+    .job-url input {
+        width: 100%;
+        padding: 10px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        font-family: monospace;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="layout">
+    <div class="top-bar">
+        <div class="logo">
+            {% if current_user.organization.logo_path %}
+                <img src="{{ url_for('static', filename=current_user.organization.logo_path) }}" alt="Logo">
+            {% else %}
+                <h2>{{ current_user.organization.name }}</h2>
+            {% endif %}
+        </div>
+        <div style="margin-left: auto;">
+            <a href="{{ url_for('auth.logout') }}" class="btn btn-secondary">Logout</a>
+        </div>
+    </div>
+    
+    <div class="main-content">
+        <div class="sidebar">
+            <a href="{{ url_for('org_admin.dashboard') }}">Dashboard</a>
+            <a href="{{ url_for('org_admin.jobs') }}" class="active">Jobs</a>
+            <a href="{{ url_for('org_admin.applications') }}">Applications</a>
+            <a href="{{ url_for('org_admin.manage_team') }}">Team</a>
+        </div>
+        
+        <div class="content-area">
+            <div style="margin-bottom: 20px;">
+                <a href="{{ url_for('org_admin.jobs') }}" class="btn btn-secondary">&larr; Back to Jobs</a>
+            </div>
+            
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ category }}">{{ message }}</div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+            
+            <div class="card">
+                <h2>Edit Job</h2>
+                
+                <form method="POST">
+                    <div class="form-group">
+                        <label for="title">Job Title *</label>
+                        <input type="text" id="title" name="title" class="form-control" value="{{ job.title }}" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="description">Job Description *</label>
+                        <textarea id="description" name="description" class="form-control" rows="10" required>{{ job.description_html }}</textarea>
+                        <small>You can use HTML for formatting</small>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="status">Status</label>
+                        <select id="status" name="status" class="form-control">
+                            <option value="draft" {% if job.status == 'draft' %}selected{% endif %}>Draft</option>
+                            <option value="published" {% if job.status == 'published' %}selected{% endif %}>Published</option>
+                            <option value="ended" {% if job.status == 'ended' %}selected{% endif %}>Ended</option>
+                        </select>
+                    </div>
+                    
+                    <button type="submit" class="btn">Update Job</button>
+                </form>
+                
+                <div class="job-url">
+                    <strong>Public Job URL:</strong>
+                    <input type="text" readonly value="{{ url_for('public.job_detail', org_slug=current_user.organization.slug, job_slug=job.public_url_slug, _external=True) }}">
+                </div>
+            </div>
+            
+            <div class="card" style="margin-top: 20px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                    <h2>Interview Questions</h2>
+                    <button onclick="generateQuestions()" class="btn">Auto-Generate Questions</button>
+                </div>
+                
+                <div id="questions-list">
+                    {% if questions %}
+                        {% for question in questions %}
+                        <div class="question-item">
+                            <div class="question-text">
+                                <strong>Q{{ loop.index }}:</strong> {{ question.text }}
+                                <br><small>Weightage: {{ question.weightage }}</small>
+                                {% if question.is_ai_generated %}
+                                <span style="color: #4CAF50; font-size: 12px;"> (AI Generated)</span>
+                                {% endif %}
+                            </div>
+                            <div class="question-actions">
+                                <form method="POST" action="{{ url_for('org_admin.delete_question', question_id=question.id) }}" style="display: inline;">
+                                    <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('Delete this question?')">Delete</button>
+                                </form>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <p>No questions yet. Add questions manually or use Auto-Generate.</p>
+                    {% endif %}
+                </div>
+                
+                <h3 style="margin-top: 30px;">Add New Question</h3>
+                <form method="POST" action="{{ url_for('org_admin.add_question', job_id=job.id) }}">
+                    <div class="form-group">
+                        <label for="text">Question Text *</label>
+                        <textarea id="text" name="text" class="form-control" rows="3" required></textarea>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="weightage">Weightage (1-20) *</label>
+                        <input type="number" id="weightage" name="weightage" class="form-control" min="1" max="20" value="10" required>
+                    </div>
+                    
+                    <button type="submit" class="btn">Add Question</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function generateQuestions() {
+    if (!confirm('This will generate AI questions. Continue?')) return;
+    
+    fetch('{{ url_for("org_admin.generate_questions", job_id=job.id) }}', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert('Generated ' + data.count + ' questions!');
+            location.reload();
+        } else {
+            alert('Error: ' + data.error);
+        }
+    })
+    .catch(error => {
+        alert('Error generating questions');
+    });
+}
+</script>
+{% endblock %}
+
