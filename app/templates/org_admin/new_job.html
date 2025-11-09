@@ -1,73 +1,79 @@
-{% extends 'org_admin/dashboard.html' %}
+{% extends 'base.html' %}
+
+{% block title %}Create New Job - Organization Dashboard{% endblock %}
 
 {% block extra_head %}
-{{ super() }}
 <link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
 {% endblock %}
 
 {% block extra_css %}
-{{ super() }}
+<style>
+body {
+    margin: 0;
+    padding: 0;
+}
+
 .ql-container {
-    border-radius: 0 0 4px 4px;
+    border-radius: 0 0 var(--border-radius-md) var(--border-radius-md);
+    border-color: var(--border-color);
 }
+
 .ql-toolbar {
-    border-radius: 4px 4px 0 0;
+    border-radius: var(--border-radius-md) var(--border-radius-md) 0 0;
+    border-color: var(--border-color);
+    background: var(--gray-50);
 }
+
 .ql-editor {
     min-height: 250px;
+    font-size: var(--font-size-base);
 }
+</style>
 {% endblock %}
 
 {% block content %}
-<div class="layout">
-    <div class="top-bar">
-        <div class="logo">
-            {% if current_user.organization.logo_path %}
-                <img src="{{ url_for('static', filename=current_user.organization.logo_path) }}" alt="Logo">
-            {% else %}
-                <h2>{{ current_user.organization.name }}</h2>
-            {% endif %}
-        </div>
-        <div style="margin-left: auto;">
-            <a href="{{ url_for('auth.logout') }}" class="btn btn-secondary">Logout</a>
+{% from 'org_admin/_layout.html' import admin_layout %}
+{% call admin_layout('jobs', current_user) %}
+    <div class="mb-4">
+        <a href="{{ url_for('org_admin.jobs') }}" class="btn btn-secondary">← Back to Jobs</a>
+    </div>
+    
+    <div class="page-header">
+        <div class="page-header-content">
+            <div>
+                <h1 class="page-title">Create New Job</h1>
+                <p class="page-subtitle">Post a new job opening for your organization</p>
+            </div>
         </div>
     </div>
     
-    <div class="main-content">
-        <div class="sidebar">
-            <a href="{{ url_for('org_admin.dashboard') }}">Dashboard</a>
-            <a href="{{ url_for('org_admin.jobs') }}" class="active">Jobs</a>
-            <a href="{{ url_for('org_admin.applications') }}">Applications</a>
-            <a href="{{ url_for('org_admin.manage_team') }}">Team</a>
-        </div>
-        
-        <div class="content-area">
-            <div style="margin-bottom: 20px;">
-                <a href="{{ url_for('org_admin.jobs') }}" class="btn btn-secondary">&larr; Back to Jobs</a>
-            </div>
-            
-            <div class="card">
-                <h2>Create New Job</h2>
+    <div class="card">
+        <div class="card-body">
+            <form method="POST" id="job-form">
+                <div class="form-group">
+                    <label for="title" class="form-label">Job Title *</label>
+                    <input type="text" id="title" name="title" class="form-control" placeholder="e.g. Senior Software Engineer" required autofocus>
+                </div>
                 
-                <form method="POST" id="job-form">
-                    <div class="form-group">
-                        <label for="title">Job Title *</label>
-                        <input type="text" id="title" name="title" class="form-control" required>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label for="description-editor">Job Description *</label>
-                        <input type="hidden" id="description" name="description">
-                        <div id="description-editor"></div>
-                        <small>Use the toolbar to format your job description.</small>
-                    </div>
-                    
-                    <button type="submit" class="btn">Create Job</button>
-                </form>
-            </div>
+                <div class="form-group">
+                    <label for="description-editor" class="form-label">Job Description *</label>
+                    <input type="hidden" id="description" name="description">
+                    <div id="description-editor"></div>
+                    <small class="text-muted">Use the toolbar to format your job description with headings, lists, and more.</small>
+                </div>
+                
+                <div class="d-flex gap-3">
+                    <button type="submit" class="btn btn-primary btn-lg">Create Job</button>
+                    <a href="{{ url_for('org_admin.jobs') }}" class="btn btn-secondary btn-lg">Cancel</a>
+                </div>
+            </form>
         </div>
     </div>
-</div>
+    
+    <div class="alert alert-info mt-5">
+        <strong>📝 Next Steps:</strong> After creating the job, you'll be able to add interview questions and publish it to accept applications.
+    </div>
+{% endcall %}
 {% endblock %}
 
 {% block scripts %}

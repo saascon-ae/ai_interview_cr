@@ -1,35 +1,37 @@
-{% extends 'org_admin/dashboard.html' %}
+{% extends 'base.html' %}
+
+{% block title %}Applications - Organization Dashboard{% endblock %}
+
+{% block extra_css %}
+<style>
+body {
+    margin: 0;
+    padding: 0;
+}
+</style>
+{% endblock %}
 
 {% block content %}
-<div class="layout">
-    <div class="top-bar">
-        <div class="logo">
-            {% if current_user.organization.logo_path %}
-                <img src="{{ url_for('static', filename=current_user.organization.logo_path) }}" alt="Logo">
-            {% else %}
-                <h2>{{ current_user.organization.name }}</h2>
-            {% endif %}
-        </div>
-        <div style="margin-left: auto;">
-            <a href="{{ url_for('auth.logout') }}" class="btn btn-secondary">Logout</a>
+{% from 'org_admin/_layout.html' import admin_layout %}
+{% call admin_layout('applications', current_user) %}
+    <div class="page-header">
+        <div class="page-header-content">
+            <div>
+                <h1 class="page-title">Applications</h1>
+                <p class="page-subtitle">Review and manage candidate applications</p>
+            </div>
         </div>
     </div>
     
-    <div class="main-content">
-        <div class="sidebar">
-            <a href="{{ url_for('org_admin.dashboard') }}">Dashboard</a>
-            <a href="{{ url_for('org_admin.jobs') }}">Jobs</a>
-            <a href="{{ url_for('org_admin.applications') }}" class="active">Applications</a>
-            <a href="{{ url_for('org_admin.manage_team') }}">Team</a>
-        </div>
-        
-        <div class="content-area">
-            <h1 style="margin-bottom: 30px;">Applications</h1>
+    <!-- Recommended Candidates Section -->
+    <div class="card mb-5">
+        <div class="card-body">
+            <h3 class="card-title">Recommended Candidates</h3>
+            <p class="card-subtitle">Candidates who have met the recommended threshold</p>
             
-            <div class="card" style="margin-bottom: 30px;">
-                <h3 style="margin-bottom: 20px;">Recommended Candidates</h3>
-                {% if recommended_applications %}
-                <table>
+            {% if recommended_applications %}
+            <div class="table-container" style="padding: 0; box-shadow: none;">
+                <table class="table">
                     <thead>
                         <tr>
                             <th>Candidate Name</th>
@@ -55,25 +57,34 @@
                                 <span class="status-badge status-{{ app.status }}">{{ app.status.capitalize() }}</span>
                             </td>
                             <td>{{ '%.1f' % app.total_score }} / {{ app.total_weightage }}</td>
-                            <td>{{ '%.1f' % app.score_percentage }}%</td>
-                            <td>{{ '%.1f' % app.candidate.matching_percentage if app.candidate.matching_percentage else 'N/A' }}%</td>
+                            <td><span class="badge badge-success">{{ '%.1f' % app.score_percentage }}%</span></td>
+                            <td><span class="badge badge-primary">{{ '%.1f' % app.candidate.matching_percentage if app.candidate.matching_percentage else 'N/A' }}%</span></td>
                             <td>{{ app.created_at.strftime('%Y-%m-%d') }}</td>
                             <td>
-                                <a href="{{ url_for('org_admin.view_application', application_id=app.id) }}" class="btn btn-sm btn-secondary">View</a>
+                                <a href="{{ url_for('org_admin.view_application', application_id=app.id) }}" class="btn btn-sm btn-primary">View</a>
                             </td>
                         </tr>
                         {% endfor %}
                     </tbody>
                 </table>
-                {% else %}
-                <p>No candidates have reached the recommended threshold yet.</p>
-                {% endif %}
             </div>
+            {% else %}
+            <div class="text-center" style="padding: var(--spacing-8) 0;">
+                <p class="text-muted">No candidates have reached the recommended threshold yet.</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
 
-            <div class="card">
-                <h3 style="margin-bottom: 20px;">Other Candidates</h3>
-                {% if other_applications %}
-                <table>
+    <!-- Other Candidates Section -->
+    <div class="card">
+        <div class="card-body">
+            <h3 class="card-title">Other Candidates</h3>
+            <p class="card-subtitle">All other candidate applications</p>
+            
+            {% if other_applications %}
+            <div class="table-container" style="padding: 0; box-shadow: none;">
+                <table class="table">
                     <thead>
                         <tr>
                             <th>Candidate Name</th>
@@ -99,8 +110,8 @@
                                 <span class="status-badge status-{{ app.status }}">{{ app.status.capitalize() }}</span>
                             </td>
                             <td>{{ '%.1f' % app.total_score }} / {{ app.total_weightage }}</td>
-                            <td>{{ '%.1f' % app.score_percentage }}%</td>
-                            <td>{{ '%.1f' % app.candidate.matching_percentage if app.candidate.matching_percentage else 'N/A' }}%</td>
+                            <td><span class="badge badge-secondary">{{ '%.1f' % app.score_percentage }}%</span></td>
+                            <td><span class="badge badge-info">{{ '%.1f' % app.candidate.matching_percentage if app.candidate.matching_percentage else 'N/A' }}%</span></td>
                             <td>{{ app.created_at.strftime('%Y-%m-%d') }}</td>
                             <td>
                                 <a href="{{ url_for('org_admin.view_application', application_id=app.id) }}" class="btn btn-sm btn-secondary">View</a>
@@ -109,12 +120,14 @@
                         {% endfor %}
                     </tbody>
                 </table>
-                {% else %}
-                <p>No other candidates at this time.</p>
-                {% endif %}
             </div>
+            {% else %}
+            <div class="text-center" style="padding: var(--spacing-8) 0;">
+                <p class="text-muted">No other candidates at this time.</p>
+            </div>
+            {% endif %}
         </div>
     </div>
-</div>
+{% endcall %}
 {% endblock %}
 

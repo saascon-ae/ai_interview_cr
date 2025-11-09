@@ -1,68 +1,130 @@
-{% extends 'org_admin/dashboard.html' %}
+{% extends 'base.html' %}
+
+{% block title %}Manage Team - Organization Dashboard{% endblock %}
+
+{% block extra_css %}
+<style>
+body {
+    margin: 0;
+    padding: 0;
+}
+
+/* Modal Styles */
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    overflow: auto;
+    background-color: rgba(0, 0, 0, 0.5);
+    animation: fadeIn 0.2s ease;
+}
+
+.modal.show {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.modal-content {
+    background-color: var(--card-bg);
+    margin: auto;
+    padding: 0;
+    border-radius: var(--border-radius-xl);
+    box-shadow: var(--shadow-xl);
+    width: 90%;
+    max-width: 600px;
+    animation: slideDown 0.3s ease;
+}
+
+.modal-header {
+    padding: var(--spacing-6);
+    border-bottom: 1px solid var(--border-light);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.modal-header h3 {
+    margin: 0;
+    color: var(--text-heading);
+    font-size: var(--font-size-xl);
+    font-weight: var(--font-weight-semibold);
+}
+
+.modal-close {
+    background: none;
+    border: none;
+    font-size: 28px;
+    font-weight: 300;
+    color: var(--text-muted);
+    cursor: pointer;
+    padding: 0;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--border-radius-md);
+    transition: all 0.2s ease;
+}
+
+.modal-close:hover {
+    background-color: var(--gray-100);
+    color: var(--text-primary);
+}
+
+.modal-body {
+    padding: var(--spacing-6);
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes slideDown {
+    from {
+        transform: translateY(-50px);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+</style>
+{% endblock %}
 
 {% block content %}
-<div class="layout">
-    <div class="top-bar">
-        <div class="logo">
-            {% if current_user.organization.logo_path %}
-                <img src="{{ url_for('static', filename=current_user.organization.logo_path) }}" alt="Logo">
-            {% else %}
-                <h2>{{ current_user.organization.name }}</h2>
-            {% endif %}
-        </div>
-        <div style="margin-left: auto;">
-            <a href="{{ url_for('auth.logout') }}" class="btn btn-secondary">Logout</a>
+{% from 'org_admin/_layout.html' import admin_layout %}
+{% call admin_layout('team', current_user) %}
+    <div class="page-header">
+        <div class="page-header-content">
+            <div>
+                <h1 class="page-title">Manage Team</h1>
+                <p class="page-subtitle">Invite and manage your team members</p>
+            </div>
+            <div>
+                <button type="button" class="btn btn-primary" onclick="openInviteModal()">
+                    + Invite Team Member
+                </button>
+            </div>
         </div>
     </div>
     
-    <div class="main-content">
-        <div class="sidebar">
-            <a href="{{ url_for('org_admin.dashboard') }}">Dashboard</a>
-            <a href="{{ url_for('org_admin.jobs') }}">Jobs</a>
-            <a href="{{ url_for('org_admin.applications') }}">Applications</a>
-            <a href="{{ url_for('org_admin.manage_team') }}" class="active">Team</a>
-        </div>
-        
-        <div class="content-area">
-            {% with messages = get_flashed_messages(with_categories=true) %}
-                {% if messages %}
-                    {% for category, message in messages %}
-                        <div class="alert alert-{{ category }}">{{ message }}</div>
-                    {% endfor %}
-                {% endif %}
-            {% endwith %}
+    <!-- Team Members Table -->
+    <div class="card">
+        <div class="card-body">
+            <h3 class="card-title">Current Team Members</h3>
+            <p class="card-subtitle">All members with access to your organization</p>
             
-            <h1 style="margin-bottom: 20px;">Manage Team</h1>
-            
-            <div class="card">
-                <h2 style="margin-bottom: 15px;">Invite New Team Member</h2>
-                <form method="POST" action="{{ url_for('org_admin.manage_team') }}">
-                    <div class="form-group">
-                        <label for="first_name">First Name *</label>
-                        <input type="text" id="first_name" name="first_name" class="form-control" required>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label for="last_name">Last Name *</label>
-                        <input type="text" id="last_name" name="last_name" class="form-control" required>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label for="email">Work Email *</label>
-                        <input type="email" id="email" name="email" class="form-control" required>
-                    </div>
-                    
-                    <button type="submit" class="btn">Send Invite</button>
-                </form>
-                <p style="margin-top: 10px; color: #666; font-size: 14px;">
-                    Invited users receive a temporary password and must reset it on first login.
-                </p>
-            </div>
-            
-            <div class="card">
-                <h2 style="margin-bottom: 15px;">Current Team Members</h2>
-                {% if team_members %}
-                <table>
+            {% if team_members %}
+            <div class="table-container" style="padding: 0; box-shadow: none;">
+                <table class="table">
                     <thead>
                         <tr>
                             <th>Name</th>
@@ -70,31 +132,184 @@
                             <th>Status</th>
                             <th>Must Reset Password</th>
                             <th>Added</th>
+                            <th>Actions</th>
                         </tr>
                     </thead>
                     <tbody>
                         {% for member in team_members %}
                         <tr>
-                            <td>{{ member.first_name }} {{ member.last_name }}</td>
+                            <td><strong>{{ member.first_name }} {{ member.last_name }}</strong></td>
                             <td>{{ member.email }}</td>
                             <td>
                                 <span class="status-badge status-{{ 'active' if member.is_active else 'inactive' }}">
                                     {{ 'Active' if member.is_active else 'Inactive' }}
                                 </span>
                             </td>
-                            <td>{{ 'Yes' if member.must_change_password else 'No' }}</td>
+                            <td>
+                                {% if member.must_change_password %}
+                                    <span class="badge badge-warning">Yes</span>
+                                {% else %}
+                                    <span class="badge badge-secondary">No</span>
+                                {% endif %}
+                            </td>
                             <td>{{ member.created_at.strftime('%Y-%m-%d') }}</td>
+                            <td>
+                                <div style="display: flex; gap: var(--spacing-2);">
+                                    <button type="button" class="btn btn-sm btn-secondary" onclick="openEditModal({{ member.id }}, '{{ member.first_name }}', '{{ member.last_name }}', '{{ member.email }}')">
+                                        Edit
+                                    </button>
+                                    {% if member.id != current_user.id %}
+                                    <form method="POST" action="{{ url_for('org_admin.toggle_team_member_status', user_id=member.id) }}" style="display: inline;">
+                                        <button type="submit" class="btn btn-sm {% if member.is_active %}btn-warning{% else %}btn-success{% endif %}" 
+                                                onclick="return confirm('Are you sure you want to {{ 'deactivate' if member.is_active else 'activate' }} this user?')">
+                                            {{ 'Deactivate' if member.is_active else 'Activate' }}
+                                        </button>
+                                    </form>
+                                    {% endif %}
+                                </div>
+                            </td>
                         </tr>
                         {% endfor %}
                     </tbody>
                 </table>
-                {% else %}
-                <p>No team members yet. Invite your first teammate above.</p>
-                {% endif %}
+            </div>
+            {% else %}
+            <div class="text-center" style="padding: var(--spacing-8) 0;">
+                <p class="text-muted">No team members yet. Invite your first teammate above.</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Invite Team Member Modal -->
+    <div id="inviteModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Invite New Team Member</h3>
+                <button type="button" class="modal-close" onclick="closeInviteModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p class="card-subtitle mb-4">Send an invitation to add a new team member to your organization</p>
+                
+                <form method="POST" action="{{ url_for('org_admin.manage_team') }}">
+                    <div class="form-group">
+                        <label for="first_name" class="form-label">First Name *</label>
+                        <input type="text" id="first_name" name="first_name" class="form-control" placeholder="Enter first name" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="last_name" class="form-label">Last Name *</label>
+                        <input type="text" id="last_name" name="last_name" class="form-control" placeholder="Enter last name" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="email" class="form-label">Work Email *</label>
+                        <input type="email" id="email" name="email" class="form-control" placeholder="email@example.com" required>
+                    </div>
+                    
+                    <div class="alert alert-info mb-4">
+                        <strong>Note:</strong> Invited users receive a temporary password and must reset it on first login.
+                    </div>
+                    
+                    <div style="display: flex; gap: var(--spacing-3); justify-content: flex-end;">
+                        <button type="button" class="btn btn-secondary" onclick="closeInviteModal()">Cancel</button>
+                        <button type="submit" class="btn btn-primary">Send Invite</button>
+                    </div>
+                </form>
             </div>
         </div>
     </div>
-</div>
+
+    <!-- Edit Team Member Modal -->
+    <div id="editModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Edit Team Member</h3>
+                <button type="button" class="modal-close" onclick="closeEditModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p class="card-subtitle mb-4">Update team member information</p>
+                
+                <form method="POST" id="editForm" action="">
+                    <div class="form-group">
+                        <label for="edit_first_name" class="form-label">First Name *</label>
+                        <input type="text" id="edit_first_name" name="first_name" class="form-control" placeholder="Enter first name" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="edit_last_name" class="form-label">Last Name *</label>
+                        <input type="text" id="edit_last_name" name="last_name" class="form-control" placeholder="Enter last name" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="edit_email" class="form-label">Work Email *</label>
+                        <input type="email" id="edit_email" name="email" class="form-control" placeholder="email@example.com" required>
+                    </div>
+                    
+                    <div style="display: flex; gap: var(--spacing-3); justify-content: flex-end;">
+                        <button type="button" class="btn btn-secondary" onclick="closeEditModal()">Cancel</button>
+                        <button type="submit" class="btn btn-primary">Update Member</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+{% endcall %}
 {% endblock %}
 
+{% block scripts %}
+<script>
+function openInviteModal() {
+    document.getElementById('inviteModal').classList.add('show');
+    document.body.style.overflow = 'hidden';
+}
 
+function closeInviteModal() {
+    document.getElementById('inviteModal').classList.remove('show');
+    document.body.style.overflow = 'auto';
+}
+
+function openEditModal(userId, firstName, lastName, email) {
+    const editForm = document.getElementById('editForm');
+    editForm.action = `/admin/team/${userId}/edit`;
+    
+    document.getElementById('edit_first_name').value = firstName;
+    document.getElementById('edit_last_name').value = lastName;
+    document.getElementById('edit_email').value = email;
+    
+    document.getElementById('editModal').classList.add('show');
+    document.body.style.overflow = 'hidden';
+}
+
+function closeEditModal() {
+    document.getElementById('editModal').classList.remove('show');
+    document.body.style.overflow = 'auto';
+}
+
+// Close modal when clicking outside of it
+window.onclick = function(event) {
+    const inviteModal = document.getElementById('inviteModal');
+    const editModal = document.getElementById('editModal');
+    
+    if (event.target == inviteModal) {
+        closeInviteModal();
+    } else if (event.target == editModal) {
+        closeEditModal();
+    }
+}
+
+// Close modal on escape key
+document.addEventListener('keydown', function(event) {
+    if (event.key === 'Escape') {
+        const inviteModal = document.getElementById('inviteModal');
+        const editModal = document.getElementById('editModal');
+        
+        if (inviteModal.classList.contains('show')) {
+            closeInviteModal();
+        } else if (editModal.classList.contains('show')) {
+            closeEditModal();
+        }
+    }
+});
+</script>
+{% endblock %}

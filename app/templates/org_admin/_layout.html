@@ -1,0 +1,65 @@
+{% macro admin_layout(active_page, current_user) %}
+<div class="layout-wrapper">
+    <!-- Sidebar -->
+    <aside class="layout-sidebar">
+        <div class="sidebar-header">
+            <a href="{{ url_for('org_admin.dashboard') }}" class="sidebar-brand">
+                {% if current_user.organization.logo_path %}
+                    <img src="{{ url_for('static', filename=current_user.organization.logo_path) }}" alt="Logo">
+                {% else %}
+                    <span class="sidebar-brand-text">{{ current_user.organization.name[:20] }}</span>
+                {% endif %}
+            </a>
+        </div>
+        <nav class="sidebar-menu">
+            <div class="menu-section">
+                <a href="{{ url_for('org_admin.dashboard') }}" class="menu-item {{ 'active' if active_page == 'dashboard' else '' }}">
+                    <span class="menu-icon">📊</span>
+                    Dashboard
+                </a>
+                <a href="{{ url_for('org_admin.jobs') }}" class="menu-item {{ 'active' if active_page == 'jobs' else '' }}">
+                    <span class="menu-icon">💼</span>
+                    Jobs
+                </a>
+                <a href="{{ url_for('org_admin.applications') }}" class="menu-item {{ 'active' if active_page == 'applications' else '' }}">
+                    <span class="menu-icon">📝</span>
+                    Applications
+                </a>
+                <a href="{{ url_for('org_admin.manage_team') }}" class="menu-item {{ 'active' if active_page == 'team' else '' }}">
+                    <span class="menu-icon">👥</span>
+                    Team
+                </a>
+            </div>
+        </nav>
+    </aside>
+    
+    <!-- Main Content -->
+    <div class="layout-content with-sidebar">
+        <!-- Top Navbar -->
+        <nav class="layout-navbar with-sidebar">
+            <div class="navbar-content">
+                <div class="navbar-brand">
+                    <h2>{{ current_user.organization.name }}</h2>
+                </div>
+                <div class="navbar-actions">
+                    <a href="{{ url_for('auth.logout') }}" class="btn btn-secondary">Logout</a>
+                </div>
+            </div>
+        </nav>
+        
+        <!-- Content -->
+        <div class="content-wrapper">
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ category }}">{{ message }}</div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+            
+            {{ caller() }}
+        </div>
+    </div>
+</div>
+{% endmacro %}
+

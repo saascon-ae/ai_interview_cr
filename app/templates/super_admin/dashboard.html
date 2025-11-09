@@ -2,111 +2,17 @@
 
 {% block title %}Super Admin Dashboard{% endblock %}
 
-{% block extra_css %}
-<style>
-    .header {
-        background: white;
-        padding: 20px;
-        margin-bottom: 20px;
-        border-radius: 8px;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        display: flex;
-        flex-direction: column;
-        gap: 15px;
-    }
-    
-    .header-title h1 {
-        color: #333;
-        font-size: 28px;
-        margin: 0;
-    }
-    
-    .header-actions {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-    }
-
-    .header-actions-left,
-    .header-actions-right {
-        display: flex;
-        align-items: center;
-        gap: 10px;
-    }
-    
-    .table-container {
-        background: white;
-        border-radius: 8px;
-        padding: 20px;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        overflow-x: auto;
-    }
-    
-    table {
-        width: 100%;
-        border-collapse: collapse;
-        min-width: 1000px;
-    }
-    
-    table th {
-        text-align: left;
-        padding: 12px;
-        background-color: #f8f9fa;
-        font-weight: 600;
-        border-bottom: 2px solid #dee2e6;
-    }
-    
-    table td {
-        padding: 12px;
-        border-bottom: 1px solid #dee2e6;
-    }
-    
-    table tr:hover {
-        background-color: #f8f9fa;
-    }
-    
-    .status-badge {
-        display: inline-block;
-        padding: 4px 12px;
-        border-radius: 12px;
-        font-size: 12px;
-        font-weight: 600;
-    }
-    
-    .status-active {
-        background-color: #d4edda;
-        color: #155724;
-    }
-    
-    .status-inactive {
-        background-color: #f8d7da;
-        color: #721c24;
-    }
-    
-    .action-buttons {
-        display: flex;
-        gap: 5px;
-    }
-    
-    .btn-sm {
-        padding: 5px 10px;
-        font-size: 14px;
-    }
-</style>
-{% endblock %}
-
 {% block content %}
-<div class="container">
-    <div class="header">
-        <div class="header-title">
-            <h1>Super Admin Dashboard</h1>
-        </div>
-        <div class="header-actions">
-            <div class="header-actions-left">
-                <a href="{{ url_for('super_admin.add_organization') }}" class="btn">Add Organization</a>
+<div class="container" style="padding-top: var(--spacing-8); padding-bottom: var(--spacing-8);">
+    <div class="page-header">
+        <div class="page-header-content">
+            <div>
+                <h1 class="page-title">Super Admin Dashboard</h1>
+                <p class="page-subtitle">Manage organizations and system settings</p>
             </div>
-            <div class="header-actions-right">
+            <div class="page-actions">
                 <a href="{{ url_for('super_admin.change_password') }}" class="btn btn-secondary">Change Password</a>
+                <a href="{{ url_for('super_admin.add_organization') }}" class="btn btn-primary">+ Add Organization</a>
                 <a href="{{ url_for('auth.logout') }}" class="btn btn-secondary">Logout</a>
             </div>
         </div>
@@ -121,10 +27,12 @@
     {% endwith %}
     
     <div class="table-container">
-        <h2 style="margin-bottom: 20px;">Organizations</h2>
+        <div class="table-header">
+            <h2 class="table-title">Organizations</h2>
+        </div>
         
         {% if org_stats %}
-        <table>
+        <table class="table">
             <thead>
                 <tr>
                     <th>Name</th>
@@ -154,13 +62,13 @@
                         </span>
                     </td>
                     <td>
-                        <div class="action-buttons">
+                        <div style="display: flex; gap: var(--spacing-2); flex-wrap: wrap;">
                             <a href="{{ url_for('super_admin.edit_organization', org_id=stat.organization.id) }}" class="btn btn-sm btn-secondary">Edit</a>
                             <form method="POST" action="{{ url_for('super_admin.send_invite', org_id=stat.organization.id) }}" style="display: inline;">
-                                <button type="submit" class="btn btn-sm">Send Invite</button>
+                                <button type="submit" class="btn btn-sm btn-primary">Send Invite</button>
                             </form>
                             <a href="{{ url_for('super_admin.toggle_organization_status', org_id=stat.organization.id) }}" 
-                               class="btn btn-sm" 
+                               class="btn btn-sm {{ 'btn-success' if stat.organization.status == 'inactive' else 'btn-warning' }}" 
                                onclick="return confirm('Are you sure?')">
                                 {{ 'Activate' if stat.organization.status == 'inactive' else 'Deactivate' }}
                             </a>
@@ -171,7 +79,9 @@
             </tbody>
         </table>
         {% else %}
-        <p>No organizations found. <a href="{{ url_for('super_admin.add_organization') }}">Add your first organization</a></p>
+        <div class="text-center" style="padding: var(--spacing-8);">
+            <p class="text-muted">No organizations found. <a href="{{ url_for('super_admin.add_organization') }}">Add your first organization</a></p>
+        </div>
         {% endif %}
     </div>
 </div>

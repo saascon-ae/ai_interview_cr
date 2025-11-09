@@ -9,31 +9,48 @@
         justify-content: center;
         align-items: center;
         min-height: 100vh;
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        background: linear-gradient(135deg, var(--primary) 0%, #5a5cd7 50%, var(--info) 100%);
+        padding: var(--spacing-6);
     }
     
     .login-card {
-        background: white;
-        padding: 40px;
-        border-radius: 10px;
-        box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+        background: var(--card-bg);
+        padding: var(--spacing-10);
+        border-radius: var(--border-radius-2xl);
+        box-shadow: var(--shadow-2xl);
         width: 100%;
-        max-width: 400px;
+        max-width: 420px;
     }
     
     .login-header {
         text-align: center;
-        margin-bottom: 30px;
+        margin-bottom: var(--spacing-8);
+    }
+    
+    .login-logo {
+        width: 48px;
+        height: 48px;
+        background: var(--primary-light);
+        color: var(--primary);
+        border-radius: var(--border-radius-lg);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: var(--font-size-2xl);
+        font-weight: var(--font-weight-bold);
+        margin: 0 auto var(--spacing-4);
     }
     
     .login-header h1 {
-        color: #333;
-        font-size: 28px;
-        margin-bottom: 10px;
+        color: var(--text-heading);
+        font-size: var(--font-size-3xl);
+        font-weight: var(--font-weight-semibold);
+        margin-bottom: var(--spacing-2);
     }
     
     .login-header p {
-        color: #666;
+        color: var(--text-secondary);
+        font-size: var(--font-size-base);
     }
 </style>
 {% endblock %}
@@ -42,7 +59,8 @@
 <div class="login-container">
     <div class="login-card">
         <div class="login-header">
-            <h1>HR Interview Platform</h1>
+            <div class="login-logo">🎯</div>
+            <h1>Welcome Back</h1>
             <p>Please login to continue</p>
         </div>
         
@@ -56,16 +74,16 @@
         
         <form method="POST">
             <div class="form-group">
-                <label for="email">Email</label>
-                <input type="email" id="email" name="email" class="form-control" required>
+                <label for="email" class="form-label">Email</label>
+                <input type="email" id="email" name="email" class="form-control" placeholder="Enter your email" required autofocus>
             </div>
             
             <div class="form-group">
-                <label for="password">Password</label>
-                <input type="password" id="password" name="password" class="form-control" required>
+                <label for="password" class="form-label">Password</label>
+                <input type="password" id="password" name="password" class="form-control" placeholder="Enter your password" required>
             </div>
             
-            <button type="submit" class="btn" style="width: 100%;">Login</button>
+            <button type="submit" class="btn btn-primary w-100 btn-lg">Login</button>
         </form>
     </div>
 </div>

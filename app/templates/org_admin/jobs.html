@@ -1,76 +1,65 @@
-{% extends 'org_admin/dashboard.html' %}
+{% extends 'base.html' %}
+
+{% block title %}Jobs - Organization Dashboard{% endblock %}
+
+{% block extra_css %}
+<style>
+body {
+    margin: 0;
+    padding: 0;
+}
+</style>
+{% endblock %}
 
 {% block content %}
-<div class="layout">
-    <div class="top-bar">
-        <div class="logo">
-            {% if current_user.organization.logo_path %}
-                <img src="{{ url_for('static', filename=current_user.organization.logo_path) }}" alt="Logo">
-            {% else %}
-                <h2>{{ current_user.organization.name }}</h2>
-            {% endif %}
-        </div>
-        <div style="margin-left: auto;">
-            <a href="{{ url_for('auth.logout') }}" class="btn btn-secondary">Logout</a>
+{% from 'org_admin/_layout.html' import admin_layout %}
+{% call admin_layout('jobs', current_user) %}
+    <div class="page-header">
+        <div class="page-header-content">
+            <div>
+                <h1 class="page-title">Jobs</h1>
+                <p class="page-subtitle">Manage your job postings</p>
+            </div>
+            <div class="page-actions">
+                <a href="{{ url_for('org_admin.new_job') }}" class="btn btn-primary">+ New Job</a>
+            </div>
         </div>
     </div>
     
-    <div class="main-content">
-        <div class="sidebar">
-            <a href="{{ url_for('org_admin.dashboard') }}">Dashboard</a>
-            <a href="{{ url_for('org_admin.jobs') }}" class="active">Jobs</a>
-            <a href="{{ url_for('org_admin.applications') }}">Applications</a>
-            <a href="{{ url_for('org_admin.manage_team') }}">Team</a>
+    <div class="table-container">
+        {% if jobs %}
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Job Title</th>
+                    <th>Status</th>
+                    <th>Publish Date</th>
+                    <th>Applicants</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for job in jobs %}
+                <tr>
+                    <td><strong>{{ job.title }}</strong></td>
+                    <td>
+                        <span class="status-badge status-{{ job.status }}">{{ job.status.capitalize() }}</span>
+                    </td>
+                    <td>{{ job.published_at.strftime('%Y-%m-%d') if job.published_at else 'Not published' }}</td>
+                    <td><span class="badge badge-primary">{{ job.application_count }}</span></td>
+                    <td>
+                        <a href="{{ url_for('org_admin.edit_job', job_id=job.id) }}" class="btn btn-sm btn-secondary">Edit</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <div class="text-center" style="padding: var(--spacing-8);">
+            <p class="text-muted">No jobs found. <a href="{{ url_for('org_admin.new_job') }}">Create your first job</a></p>
         </div>
-        
-        <div class="content-area">
-            {% with messages = get_flashed_messages(with_categories=true) %}
-                {% if messages %}
-                    {% for category, message in messages %}
-                        <div class="alert alert-{{ category }}">{{ message }}</div>
-                    {% endfor %}
-                {% endif %}
-            {% endwith %}
-            
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px;">
-                <h1>Jobs</h1>
-                <a href="{{ url_for('org_admin.new_job') }}" class="btn">New Job</a>
-            </div>
-            
-            <div class="card">
-                {% if jobs %}
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Job Title</th>
-                            <th>Status</th>
-                            <th>Publish Date</th>
-                            <th>Applicants</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for job in jobs %}
-                        <tr>
-                            <td><strong>{{ job.title }}</strong></td>
-                            <td>
-                                <span class="status-badge status-{{ job.status }}">{{ job.status.capitalize() }}</span>
-                            </td>
-                            <td>{{ job.published_at.strftime('%Y-%m-%d') if job.published_at else 'Not published' }}</td>
-                            <td>{{ job.application_count }}</td>
-                            <td>
-                                <a href="{{ url_for('org_admin.edit_job', job_id=job.id) }}" class="btn btn-sm btn-secondary">Edit</a>
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-                {% else %}
-                <p>No jobs found. <a href="{{ url_for('org_admin.new_job') }}">Create your first job</a></p>
-                {% endif %}
-            </div>
-        </div>
+        {% endif %}
     </div>
-</div>
+{% endcall %}
 {% endblock %}
 

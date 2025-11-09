@@ -290,11 +290,35 @@ def manage_team():
             flash('First name, last name, and email are required.', 'danger')
             return redirect(url_for('org_admin.manage_team'))
 
+        # Check if user exists
         existing_user = User.query.filter_by(email=email).first()
+        
         if existing_user:
-            flash('A user with this email already exists.', 'danger')
+            # If user exists and is active, show error
+            if existing_user.is_active:
+                flash('A user with this email already exists.', 'danger')
+                return redirect(url_for('org_admin.manage_team'))
+            
+            # If user exists but is deactivated, reactivate them
+            existing_user.first_name = first_name
+            existing_user.last_name = last_name
+            existing_user.is_active = True
+            existing_user.must_change_password = True
+            
+            password = generate_password()
+            existing_user.set_password(password)
+            
+            db.session.commit()
+            
+            try:
+                send_user_invitation_email(existing_user, current_user.organization, password)
+                flash('User reactivated and invited successfully.', 'success')
+            except Exception as e:
+                flash(f'User reactivated but failed to send email: {str(e)}', 'warning')
+            
             return redirect(url_for('org_admin.manage_team'))
 
+        # Create new user if doesn't exist
         password = generate_password()
         organization_id = current_user.organization_id
 
@@ -326,4 +350,63 @@ def manage_team():
     ).order_by(User.created_at.asc()).all()
 
     return render_template('org_admin/team.html', team_members=team_members)
+
+@org_admin_bp.route('/team/<int:user_id>/toggle-status', methods=['POST'])
+@login_required
+@org_admin_required
+def toggle_team_member_status(user_id):
+    user = User.query.get_or_404(user_id)
+    
+    # Verify the user belongs to the same organization
+    if user.organization_id != current_user.organization_id:
+        flash('Unauthorized action.', 'danger')
+        return redirect(url_for('org_admin.manage_team'))
+    
+    # Prevent deactivating yourself
+    if user.id == current_user.id:
+        flash('You cannot deactivate your own account.', 'warning')
+        return redirect(url_for('org_admin.manage_team'))
+    
+    # Toggle status
+    user.is_active = not user.is_active
+    db.session.commit()
+    
+    status_text = 'activated' if user.is_active else 'deactivated'
+    flash(f'User {user.email} has been {status_text}.', 'success')
+    return redirect(url_for('org_admin.manage_team'))
+
+@org_admin_bp.route('/team/<int:user_id>/edit', methods=['POST'])
+@login_required
+@org_admin_required
+def edit_team_member(user_id):
+    user = User.query.get_or_404(user_id)
+    
+    # Verify the user belongs to the same organization
+    if user.organization_id != current_user.organization_id:
+        flash('Unauthorized action.', 'danger')
+        return redirect(url_for('org_admin.manage_team'))
+    
+    first_name = (request.form.get('first_name') or '').strip()
+    last_name = (request.form.get('last_name') or '').strip()
+    email = (request.form.get('email') or '').strip().lower()
+    
+    # Basic validation
+    if not first_name or not last_name or not email:
+        flash('First name, last name, and email are required.', 'danger')
+        return redirect(url_for('org_admin.manage_team'))
+    
+    # Check if email is being changed and if new email already exists (and is active)
+    if email != user.email:
+        existing_user = User.query.filter_by(email=email).first()
+        if existing_user and existing_user.is_active:
+            flash('A user with this email already exists.', 'danger')
+            return redirect(url_for('org_admin.manage_team'))
+        user.email = email
+    
+    user.first_name = first_name
+    user.last_name = last_name
+    
+    db.session.commit()
+    flash(f'User {user.email} has been updated.', 'success')
+    return redirect(url_for('org_admin.manage_team'))
 
