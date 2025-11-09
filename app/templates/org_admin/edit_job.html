@@ -1,42 +1,90 @@
 {% extends 'org_admin/dashboard.html' %}
 
+{% block extra_head %}
+{{ super() }}
+<link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
+{% endblock %}
+
 {% block extra_css %}
 {{ super() }}
-<style>
-    .question-item {
-        background: #f9f9f9;
-        padding: 15px;
-        margin-bottom: 10px;
-        border-radius: 4px;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-    }
-    
-    .question-text {
-        flex: 1;
-    }
-    
-    .question-actions {
-        display: flex;
-        gap: 5px;
-    }
-    
-    .job-url {
-        background: #e3f2fd;
-        padding: 15px;
-        border-radius: 4px;
-        margin-top: 20px;
-    }
-    
-    .job-url input {
-        width: 100%;
-        padding: 10px;
-        border: 1px solid #ddd;
-        border-radius: 4px;
-        font-family: monospace;
-    }
-</style>
+.question-item {
+    background: #f9f9f9;
+    padding: 15px;
+    margin-bottom: 10px;
+    border-radius: 4px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.question-text {
+    flex: 1;
+}
+
+.question-text-content {
+    display: block;
+    margin-top: 5px;
+    white-space: pre-wrap;
+}
+
+.question-actions {
+    display: flex;
+    gap: 5px;
+}
+
+.job-url {
+    background: #e3f2fd;
+    padding: 15px;
+    border-radius: 4px;
+    margin-top: 20px;
+}
+
+.job-url .job-url-display {
+    width: 100%;
+    padding: 10px;
+    background: white;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-family: monospace;
+    word-break: break-all;
+}
+
+.job-url .job-url-actions {
+    margin-top: 10px;
+    display: flex;
+    justify-content: flex-end;
+}
+
+.ql-container {
+    border-radius: 0 0 4px 4px;
+}
+
+.ql-toolbar {
+    border-radius: 4px 4px 0 0;
+}
+
+.ql-editor {
+    min-height: 250px;
+}
+
+.question-edit-form {
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px solid #ddd;
+    display: none;
+}
+
+.question-edit-form textarea {
+    width: 100%;
+    min-height: 80px;
+    resize: vertical;
+}
+
+.question-edit-actions {
+    margin-top: 10px;
+    display: flex;
+    gap: 10px;
+}
 {% endblock %}
 
 {% block content %}
@@ -78,16 +126,17 @@
             <div class="card">
                 <h2>Edit Job</h2>
                 
-                <form method="POST">
+                <form method="POST" id="job-form">
                     <div class="form-group">
                         <label for="title">Job Title *</label>
                         <input type="text" id="title" name="title" class="form-control" value="{{ job.title }}" required>
                     </div>
                     
                     <div class="form-group">
-                        <label for="description">Job Description *</label>
-                        <textarea id="description" name="description" class="form-control" rows="10" required>{{ job.description_html }}</textarea>
-                        <small>You can use HTML for formatting</small>
+                        <label for="description-editor">Job Description *</label>
+                        <input type="hidden" id="description" name="description" value="{{ job.description_html|e }}">
+                        <div id="description-editor"></div>
+                        <small>Use the toolbar to format your job description.</small>
                     </div>
                     
                     <div class="form-group">
@@ -104,7 +153,12 @@
                 
                 <div class="job-url">
                     <strong>Public Job URL:</strong>
-                    <input type="text" readonly value="{{ url_for('public.job_detail', org_slug=current_user.organization.slug, job_slug=job.public_url_slug, _external=True) }}">
+                    <div class="job-url-display" id="job-url-display">
+                        {{ url_for('public.job_detail', org_slug=current_user.organization.slug, job_slug=job.public_url_slug, _external=True) }}
+                    </div>
+                    <div class="job-url-actions">
+                        <button type="button" class="btn btn-secondary btn-sm" id="copy-job-url-button">Copy URL</button>
+                    </div>
                 </div>
             </div>
             
@@ -117,15 +171,34 @@
                 <div id="questions-list">
                     {% if questions %}
                         {% for question in questions %}
-                        <div class="question-item">
+                        <div class="question-item" data-question-id="{{ question.id }}">
                             <div class="question-text">
-                                <strong>Q{{ loop.index }}:</strong> {{ question.text }}
-                                <br><small>Weightage: {{ question.weightage }}</small>
-                                {% if question.is_ai_generated %}
-                                <span style="color: #4CAF50; font-size: 12px;"> (AI Generated)</span>
-                                {% endif %}
+                                <strong>Q{{ loop.index }}:</strong>
+                                <span class="question-text-content">{{ question.text }}</span>
+                                <small>
+                                    Weightage:
+                                    <span class="question-weight">{{ question.weightage }}</span>
+                                    {% if question.is_ai_generated %}
+                                    <span style="color: #4CAF50; font-size: 12px;"> (AI Generated)</span>
+                                    {% endif %}
+                                </small>
+                                <form class="question-edit-form">
+                                    <label>
+                                        <span style="display:block; font-weight:600; margin-bottom:4px;">Question Text</span>
+                                        <textarea name="text">{{ question.text }}</textarea>
+                                    </label>
+                                    <label style="display:block; margin-top:10px;">
+                                        <span style="display:block; font-weight:600; margin-bottom:4px;">Weightage (1-20)</span>
+                                        <input type="number" name="weightage" min="1" max="20" value="{{ question.weightage }}">
+                                    </label>
+                                    <div class="question-edit-actions">
+                                        <button type="button" class="btn btn-sm btn-secondary save-question-btn">Save</button>
+                                        <button type="button" class="btn btn-sm btn-danger cancel-edit-question-btn">Cancel</button>
+                                    </div>
+                                </form>
                             </div>
                             <div class="question-actions">
+                                <button type="button" class="btn btn-sm btn-secondary edit-question-btn">Edit</button>
                                 <form method="POST" action="{{ url_for('org_admin.delete_question', question_id=question.id) }}" style="display: inline;">
                                     <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('Delete this question?')">Delete</button>
                                 </form>
@@ -156,10 +229,15 @@
     </div>
 </div>
 
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script src="https://cdn.quilljs.com/1.3.6/quill.min.js"></script>
 <script>
 function generateQuestions() {
     if (!confirm('This will generate AI questions. Continue?')) return;
-    
+
     fetch('{{ url_for("org_admin.generate_questions", job_id=job.id) }}', {
         method: 'POST',
         headers: {
@@ -177,6 +255,187 @@ function generateQuestions() {
     })
     .catch(error => {
         alert('Error generating questions');
+    });
+}
+
+document.addEventListener('DOMContentLoaded', function () {
+    var editorElement = document.getElementById('description-editor');
+    if (!editorElement) {
+        return;
+    }
+
+    var quill = new Quill(editorElement, {
+        theme: 'snow',
+        modules: {
+            toolbar: [
+                [{ header: [1, 2, 3, false] }],
+                ['bold', 'italic', 'underline', 'strike'],
+                [{ list: 'ordered' }, { list: 'bullet' }],
+                ['link', 'blockquote', 'code-block'],
+                [{ align: [] }],
+                ['clean']
+            ]
+        }
+    });
+
+    var initialContent = {{ job.description_html|tojson|safe }};
+    if (initialContent) {
+        quill.clipboard.dangerouslyPasteHTML(initialContent);
+    }
+
+    var hiddenInput = document.getElementById('description');
+    if (initialContent && hiddenInput && !hiddenInput.value) {
+        hiddenInput.value = initialContent;
+    }
+
+    var form = document.getElementById('job-form');
+    if (!hiddenInput || !form) {
+        return;
+    }
+    form.addEventListener('submit', function (event) {
+        var text = quill.getText().trim();
+        if (!text) {
+            event.preventDefault();
+            alert('Job description is required.');
+            return;
+        }
+
+        hiddenInput.value = quill.root.innerHTML;
+    });
+
+    var copyButton = document.getElementById('copy-job-url-button');
+    var displayElement = document.getElementById('job-url-display');
+    if (copyButton && displayElement) {
+        copyButton.addEventListener('click', function () {
+            var urlText = displayElement.textContent.trim();
+            if (!urlText) {
+                return;
+            }
+            navigator.clipboard.writeText(urlText).then(function () {
+                copyButton.textContent = 'Copied!';
+                setTimeout(function () {
+                    copyButton.textContent = 'Copy URL';
+                }, 2000);
+            }).catch(function () {
+                alert('Unable to copy URL. Please copy manually.');
+            });
+        });
+    }
+
+    var questionsList = document.getElementById('questions-list');
+    if (questionsList) {
+        questionsList.addEventListener('click', function (event) {
+            var target = event.target;
+            if (target.classList.contains('edit-question-btn')) {
+                var item = target.closest('.question-item');
+                toggleQuestionEdit(item, true);
+            } else if (target.classList.contains('cancel-edit-question-btn')) {
+                var item = target.closest('.question-item');
+                toggleQuestionEdit(item, false, true);
+            } else if (target.classList.contains('save-question-btn')) {
+                var item = target.closest('.question-item');
+                saveQuestionEdits(item, target);
+            }
+        });
+    }
+});
+
+function toggleQuestionEdit(item, show, reset) {
+    if (!item) return;
+    var form = item.querySelector('.question-edit-form');
+    var textContent = item.querySelector('.question-text-content');
+    var details = item.querySelector('.question-text small');
+    var textArea = form ? form.querySelector('textarea[name="text"]') : null;
+    var weightInput = form ? form.querySelector('input[name="weightage"]') : null;
+    var weightSpan = item.querySelector('.question-weight');
+    if (!form || !textContent || !details) return;
+
+    if (show) {
+        if (textArea) {
+            textArea.value = textContent.textContent.trim();
+        }
+        if (weightInput && weightSpan) {
+            weightInput.value = weightSpan.textContent.trim();
+        }
+        form.style.display = 'block';
+        textContent.style.display = 'none';
+        details.style.display = 'none';
+    } else {
+        form.style.display = 'none';
+        textContent.style.display = 'block';
+        details.style.display = '';
+        if (reset) {
+            if (textArea) {
+                textArea.value = textContent.textContent.trim();
+            }
+            if (weightInput) {
+                weightInput.value = weightSpan ? weightSpan.textContent.trim() : '';
+            }
+        }
+    }
+}
+
+function saveQuestionEdits(item, button) {
+    if (!item || !button) return;
+    var form = item.querySelector('.question-edit-form');
+    var textContent = item.querySelector('.question-text-content');
+    var weightSpan = item.querySelector('.question-weight');
+    if (!form || !textContent || !weightSpan) return;
+
+    var questionId = item.getAttribute('data-question-id');
+    if (!questionId) return;
+
+    var textArea = form.querySelector('textarea[name="text"]');
+    var weightInput = form.querySelector('input[name="weightage"]');
+    if (!textArea || !weightInput) return;
+
+    var textValue = textArea.value.trim();
+    var weightValue = weightInput.value;
+
+    if (!textValue) {
+        alert('Question text cannot be empty.');
+        return;
+    }
+    var weightNumber = Number(weightValue);
+    if (!weightValue || Number.isNaN(weightNumber) || weightNumber < 1 || weightNumber > 20) {
+        alert('Weightage must be a number between 1 and 20.');
+        return;
+    }
+
+    var formData = new FormData();
+    formData.append('text', textValue);
+    formData.append('weightage', weightValue);
+
+    var originalText = button.textContent;
+    button.disabled = true;
+    button.textContent = 'Saving...';
+
+    fetch('{{ url_for("org_admin.edit_question", question_id=0) }}'.replace('0', questionId), {
+        method: 'POST',
+        body: formData
+    })
+    .then(function (response) {
+        if (!response.ok) {
+            throw new Error('Failed to update question');
+        }
+        return response.json();
+    })
+    .then(function (data) {
+        if (!data.success) {
+            throw new Error(data.error || 'Failed to update question');
+        }
+        textContent.textContent = textValue;
+        weightSpan.textContent = weightValue;
+        textArea.value = textValue;
+        weightInput.value = weightValue;
+        toggleQuestionEdit(item, false);
+    })
+    .catch(function (error) {
+        alert(error.message || 'Error updating question. Please try again.');
+    })
+    .finally(function () {
+        button.disabled = false;
+        button.textContent = originalText;
     });
 }
 </script>

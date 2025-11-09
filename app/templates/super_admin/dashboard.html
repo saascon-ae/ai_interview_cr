@@ -11,17 +11,26 @@
         border-radius: 8px;
         box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         display: flex;
-        justify-content: space-between;
-        align-items: center;
+        flex-direction: column;
+        gap: 15px;
     }
     
-    .header h1 {
+    .header-title h1 {
         color: #333;
         font-size: 28px;
+        margin: 0;
     }
     
-    .actions {
+    .header-actions {
         display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+
+    .header-actions-left,
+    .header-actions-right {
+        display: flex;
+        align-items: center;
         gap: 10px;
     }
     
@@ -89,10 +98,17 @@
 {% block content %}
 <div class="container">
     <div class="header">
-        <h1>Super Admin Dashboard</h1>
-        <div class="actions">
-            <a href="{{ url_for('super_admin.add_organization') }}" class="btn">Add Organization</a>
-            <a href="{{ url_for('auth.logout') }}" class="btn btn-secondary">Logout</a>
+        <div class="header-title">
+            <h1>Super Admin Dashboard</h1>
+        </div>
+        <div class="header-actions">
+            <div class="header-actions-left">
+                <a href="{{ url_for('super_admin.add_organization') }}" class="btn">Add Organization</a>
+            </div>
+            <div class="header-actions-right">
+                <a href="{{ url_for('super_admin.change_password') }}" class="btn btn-secondary">Change Password</a>
+                <a href="{{ url_for('auth.logout') }}" class="btn btn-secondary">Logout</a>
+            </div>
         </div>
     </div>
     

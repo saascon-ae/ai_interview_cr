@@ -1,5 +1,5 @@
 from flask import Blueprint, render_template, redirect, url_for, flash, request, current_app
-from flask_login import login_required
+from flask_login import login_required, current_user
 from app import db
 from app.models import Organization, User, Job, Application, Candidate, Answer
 from app.utils.auth import super_admin_required, generate_password, generate_slug
@@ -74,6 +74,30 @@ def dashboard():
         })
     
     return render_template('super_admin/dashboard.html', org_stats=org_stats)
+
+@super_admin_bp.route('/change-password', methods=['GET', 'POST'])
+@login_required
+@super_admin_required
+def change_password():
+    if request.method == 'POST':
+        current_password = request.form.get('current_password', '')
+        new_password = request.form.get('new_password', '')
+        confirm_password = request.form.get('confirm_password', '')
+
+        if not current_user.check_password(current_password):
+            flash('Current password is incorrect.', 'danger')
+        elif len(new_password) < 8:
+            flash('New password must be at least 8 characters long.', 'danger')
+        elif new_password != confirm_password:
+            flash('New password and confirmation do not match.', 'danger')
+        else:
+            current_user.set_password(new_password)
+            current_user.must_change_password = False
+            db.session.commit()
+            flash('Password updated successfully.', 'success')
+            return redirect(url_for('super_admin.dashboard'))
+
+    return render_template('super_admin/change_password.html')
 
 @super_admin_bp.route('/organization/add', methods=['GET', 'POST'])
 @login_required

@@ -16,12 +16,42 @@
         margin: 0 auto;
         padding: 0 20px;
         display: flex;
-        align-items: center;
+        flex-direction: column;
         gap: 20px;
+    }
+    
+    .header-top {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
     }
     
     .org-logo {
         height: 60px;
+    }
+    
+    .org-logo-placeholder {
+        height: 60px;
+        width: 60px;
+        border-radius: 50%;
+        background: #e0e0e0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 600;
+        color: #555;
+    }
+    
+    .header-info {
+        text-align: right;
+    }
+    
+    .header-info h1 {
+        margin-bottom: 5px;
+    }
+    
+    .header-info p {
+        color: #666;
     }
     
     .job-list {
@@ -61,12 +91,16 @@
 {% block content %}
 <div class="header">
     <div class="header-content">
-        {% if organization.logo_path %}
-            <img src="{{ url_for('static', filename=organization.logo_path) }}" alt="{{ organization.name }}" class="org-logo">
-        {% endif %}
-        <div>
-            <h1>{{ organization.name }}</h1>
-            <p>Career Opportunities</p>
+        <div class="header-top">
+            {% if organization.logo_path %}
+                <img src="{{ url_for('static', filename=organization.logo_path) }}" alt="{{ organization.name }}" class="org-logo">
+            {% else %}
+                <div class="org-logo-placeholder">{{ organization.name[:2]|upper }}</div>
+            {% endif %}
+            <div class="header-info">
+                <h1>{{ organization.name }}</h1>
+                <p>Career Opportunities</p>
+            </div>
         </div>
     </div>
 </div>

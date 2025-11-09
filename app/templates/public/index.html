@@ -9,6 +9,13 @@
         color: white;
         text-align: center;
         padding: 100px 20px;
+        position: relative;
+    }
+    
+    .hero-top-nav {
+        position: absolute;
+        top: 20px;
+        right: 20px;
     }
     
     .hero h1 {
@@ -48,6 +55,9 @@
 
 {% block content %}
 <div class="hero">
+    <div class="hero-top-nav">
+        <a href="{{ url_for('auth.login') }}" class="btn btn-secondary">Login</a>
+    </div>
     <h1>AI-Powered HR Interview Platform</h1>
     <p>Streamline your hiring process with intelligent pre-screening interviews</p>
 </div>
