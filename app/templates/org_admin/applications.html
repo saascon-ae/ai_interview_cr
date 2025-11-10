@@ -62,10 +62,6 @@ body {
     cursor: not-allowed;
 }
 
-.search-container {
-    margin-bottom: var(--spacing-4);
-}
-
 .search-input {
     width: 100%;
     max-width: 400px;
@@ -86,6 +82,69 @@ body {
 
 .search-input::placeholder {
     color: #999999;
+}
+
+.table-controls {
+    display: flex;
+    justify-content: flex-end;
+    margin-bottom: var(--spacing-4);
+}
+
+.table-pagination {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--spacing-3) var(--spacing-4);
+    background: var(--surface-color, #ffffff);
+    border-top: 1px solid var(--border-light);
+    gap: var(--spacing-3);
+    flex-wrap: wrap;
+}
+
+.pagination-info {
+    font-size: 13px;
+    color: var(--text-secondary);
+}
+
+.pagination-controls {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-2);
+}
+
+.pagination-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 6px 12px;
+    border-radius: var(--border-radius-sm);
+    border: 1px solid var(--border-light);
+    background: #ffffff;
+    color: var(--text-primary);
+    font-size: 13px;
+    font-weight: 600;
+    text-decoration: none;
+    transition: all 0.2s ease;
+}
+
+.pagination-button:hover {
+    border-color: var(--primary);
+    color: var(--primary);
+    box-shadow: 0 2px 6px rgba(105, 108, 255, 0.15);
+}
+
+.pagination-button--active {
+    background: var(--primary);
+    color: #ffffff;
+    border-color: var(--primary);
+}
+
+.pagination-button--disabled {
+    background: var(--bg-secondary);
+    color: var(--text-secondary);
+    border-color: var(--border-light);
+    cursor: not-allowed;
+    pointer-events: none;
 }
 
 .sortable-header {
@@ -147,7 +206,7 @@ body {
             <p class="card-subtitle">Candidates with 70% or higher interview scores</p>
             
             {% if recommended_applications %}
-            <div class="search-container">
+            <div class="table-controls">
                 <input type="text" id="searchRecommended" class="search-input" placeholder="🔍 Search by name, email, or job title...">
             </div>
             <div class="table-container" style="padding: 0; box-shadow: none;">
@@ -215,9 +274,37 @@ body {
                         {% endfor %}
                     </tbody>
                 </table>
-                <div id="recommendedNoResults" class="no-results" style="display: none;">
-                    <p>No candidates found matching your search.</p>
+                {% if recommended_stats.total > 0 %}
+                <div id="recommendedPagination" class="table-pagination">
+                    <span class="pagination-info">
+                        Showing {{ recommended_stats.start_index }} – {{ recommended_stats.end_index }} of {{ recommended_stats.total }} candidates
+                    </span>
+                    <div class="pagination-controls">
+                        {% if recommended_links.prev %}
+                        <a class="pagination-button" href="{{ recommended_links.prev }}">Previous</a>
+                        {% else %}
+                        <span class="pagination-button pagination-button--disabled">Previous</span>
+                        {% endif %}
+
+                        {% for link in recommended_links.pages %}
+                            {% if link.is_gap %}
+                                <span class="pagination-button pagination-button--disabled">&hellip;</span>
+                            {% else %}
+                                <a class="pagination-button {% if link.page == recommended_pagination.page %}pagination-button--active{% endif %}" href="{{ link.url }}">{{ link.page }}</a>
+                            {% endif %}
+                        {% endfor %}
+
+                        {% if recommended_links.next %}
+                        <a class="pagination-button" href="{{ recommended_links.next }}">Next</a>
+                        {% else %}
+                        <span class="pagination-button pagination-button--disabled">Next</span>
+                        {% endif %}
+                    </div>
                 </div>
+                {% endif %}
+            </div>
+            <div id="recommendedNoResults" class="no-results" style="display: none;">
+                <p>No candidates found matching your search.</p>
             </div>
             {% else %}
             <div class="text-center" style="padding: var(--spacing-8) 0;">
@@ -234,7 +321,7 @@ body {
             <p class="card-subtitle">All other candidate applications</p>
             
             {% if other_applications %}
-            <div class="search-container">
+            <div class="table-controls">
                 <input type="text" id="searchOther" class="search-input" placeholder="🔍 Search by name, email, or job title...">
             </div>
             <div class="table-container" style="padding: 0; box-shadow: none;">
@@ -302,9 +389,37 @@ body {
                         {% endfor %}
                     </tbody>
                 </table>
-                <div id="otherNoResults" class="no-results" style="display: none;">
-                    <p>No candidates found matching your search.</p>
+                {% if other_stats.total > 0 %}
+                <div id="otherPagination" class="table-pagination">
+                    <span class="pagination-info">
+                        Showing {{ other_stats.start_index }} – {{ other_stats.end_index }} of {{ other_stats.total }} candidates
+                    </span>
+                    <div class="pagination-controls">
+                        {% if other_links.prev %}
+                        <a class="pagination-button" href="{{ other_links.prev }}">Previous</a>
+                        {% else %}
+                        <span class="pagination-button pagination-button--disabled">Previous</span>
+                        {% endif %}
+
+                        {% for link in other_links.pages %}
+                            {% if link.is_gap %}
+                                <span class="pagination-button pagination-button--disabled">&hellip;</span>
+                            {% else %}
+                                <a class="pagination-button {% if link.page == other_pagination.page %}pagination-button--active{% endif %}" href="{{ link.url }}">{{ link.page }}</a>
+                            {% endif %}
+                        {% endfor %}
+
+                        {% if other_links.next %}
+                        <a class="pagination-button" href="{{ other_links.next }}">Next</a>
+                        {% else %}
+                        <span class="pagination-button pagination-button--disabled">Next</span>
+                        {% endif %}
+                    </div>
                 </div>
+                {% endif %}
+            </div>
+            <div id="otherNoResults" class="no-results" style="display: none;">
+                <p>No candidates found matching your search.</p>
             </div>
             {% else %}
             <div class="text-center" style="padding: var(--spacing-8) 0;">
@@ -316,21 +431,23 @@ body {
 
     <script>
         // Search functionality
-        function setupSearch(inputId, tableBodyId, noResultsId) {
+        function setupSearch(inputId, tableBodyId, noResultsId, paginationId) {
             const searchInput = document.getElementById(inputId);
-            if (!searchInput) return;
+            const tableBody = document.getElementById(tableBodyId);
+            if (!searchInput || !tableBody) return;
+
+            const noResults = document.getElementById(noResultsId);
+            const pagination = paginationId ? document.getElementById(paginationId) : null;
 
             searchInput.addEventListener('input', function() {
                 const searchTerm = this.value.toLowerCase().trim();
-                const tableBody = document.getElementById(tableBodyId);
                 const rows = tableBody.getElementsByTagName('tr');
-                const noResults = document.getElementById(noResultsId);
                 let visibleCount = 0;
 
                 for (let row of rows) {
-                    const name = row.getAttribute('data-name').toLowerCase();
-                    const email = row.getAttribute('data-email').toLowerCase();
-                    const job = row.getAttribute('data-job').toLowerCase();
+                    const name = (row.getAttribute('data-name') || '').toLowerCase();
+                    const email = (row.getAttribute('data-email') || '').toLowerCase();
+                    const job = (row.getAttribute('data-job') || '').toLowerCase();
                     
                     if (name.includes(searchTerm) || email.includes(searchTerm) || job.includes(searchTerm)) {
                         row.style.display = '';
@@ -340,11 +457,16 @@ body {
                     }
                 }
 
-                // Show/hide no results message
-                if (visibleCount === 0 && searchTerm !== '') {
-                    noResults.style.display = 'block';
-                } else {
-                    noResults.style.display = 'none';
+                if (noResults) {
+                    if (visibleCount === 0 && searchTerm !== '') {
+                        noResults.style.display = 'block';
+                    } else {
+                        noResults.style.display = 'none';
+                    }
+                }
+
+                if (pagination) {
+                    pagination.style.display = visibleCount === 0 ? 'none' : 'flex';
                 }
             });
         }
@@ -429,8 +551,8 @@ body {
         // Initialize search and sorting
         document.addEventListener('DOMContentLoaded', function() {
             // Setup search for both tables
-            setupSearch('searchRecommended', 'recommendedTableBody', 'recommendedNoResults');
-            setupSearch('searchOther', 'otherTableBody', 'otherNoResults');
+            setupSearch('searchRecommended', 'recommendedTableBody', 'recommendedNoResults', 'recommendedPagination');
+            setupSearch('searchOther', 'otherTableBody', 'otherNoResults', 'otherPagination');
             
             // Setup sorting for all headers
             document.querySelectorAll('.sortable-header').forEach(header => {

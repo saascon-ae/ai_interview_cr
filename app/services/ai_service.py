@@ -21,7 +21,12 @@ def get_prompt(key, **kwargs):
     """
     from app import db
     
-    prompt_config = AIPrompt.query.filter_by(key=key, is_active=True).first()
+    try:
+        prompt_config = AIPrompt.query.filter_by(key=key, is_active=True).first()
+    except Exception as exc:
+        current_app.logger.warning("Unable to load AI prompt '%s': %s", key, exc)
+        db.session.rollback()
+        return None
     
     if not prompt_config:
         # Return None if not found - caller will handle fallback
@@ -130,7 +135,14 @@ Make sure questions are:
 
 def analyze_cv(cv_path, job_description):
     """Analyze CV and match with job description"""
-    client = get_openai_client()
+    try:
+        client = get_openai_client()
+    except Exception as e:
+        print(f"AI analysis unavailable: {e}")
+        return {
+            'summary': 'Analysis pending',
+            'matching_percentage': 0.0
+        }
     
     # Extract CV text
     cv_text = extract_text_from_pdf(cv_path)

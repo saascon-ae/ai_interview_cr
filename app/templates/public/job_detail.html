@@ -2,115 +2,38 @@
 
 {% block title %}{{ job.title }} - {{ organization.name }}{% endblock %}
 
-{% block extra_css %}
-<style>
-    .org-header {
-        background: var(--card-bg);
-        padding: var(--spacing-8) 0;
-        box-shadow: var(--shadow-sm);
-        margin-bottom: var(--spacing-8);
-    }
-    
-    .org-header-content {
-        max-width: 1200px;
-        margin: 0 auto;
-        padding: 0 var(--content-padding);
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: var(--spacing-6);
-    }
-    
-    .org-branding {
-        display: flex;
-        align-items: center;
-        gap: var(--spacing-4);
-    }
-    
-    .org-logo {
-        height: 48px;
-        width: auto;
-        border-radius: var(--border-radius-lg);
-    }
-    
-    .org-logo-placeholder {
-        height: 48px;
-        width: 48px;
-        border-radius: var(--border-radius-lg);
-        background: var(--primary-light);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-weight: var(--font-weight-bold);
-        font-size: var(--font-size-lg);
-        color: var(--primary);
-    }
-    
-    .org-info h1 {
-        font-size: var(--font-size-xl);
-        font-weight: var(--font-weight-semibold);
-        color: var(--text-heading);
-        margin-bottom: var(--spacing-1);
-    }
-    
-    .org-info p {
-        color: var(--text-secondary);
-        font-size: var(--font-size-sm);
-        margin: 0;
-    }
-    
-    .job-content {
-        line-height: var(--line-height-relaxed);
-    }
-    
-    .job-content h1, .job-content h2, .job-content h3 {
-        color: var(--text-heading);
-        margin-top: var(--spacing-6);
-        margin-bottom: var(--spacing-4);
-    }
-    
-    .job-content ul, .job-content ol {
-        margin-left: var(--spacing-5);
-        margin-bottom: var(--spacing-4);
-    }
-    
-    .job-content p {
-        margin-bottom: var(--spacing-4);
-    }
-</style>
+{% block extra_head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/public-portal.css') }}">
 {% endblock %}
 
 {% block content %}
-<div class="org-header">
-    <div class="org-header-content">
-        <div class="org-branding">
-            {% if organization.logo_path %}
-                <img src="{{ url_for('static', filename=organization.logo_path) }}" alt="{{ organization.name }}" class="org-logo">
-            {% else %}
-                <div class="org-logo-placeholder">{{ organization.name[:2]|upper }}</div>
-            {% endif %}
-            <div class="org-info">
-                <h1>{{ organization.name }}</h1>
-                <p>Career Opportunities</p>
-            </div>
-        </div>
-        <a href="{{ url_for('public.organization_openings', org_slug=organization.slug) }}" class="btn btn-secondary">← All Openings</a>
+{% set published_date = job.published_at or job.created_at %}
+<div class="public-shell">
+    <div class="public-breadcrumb">
+        <a href="{{ url_for('public.organization_openings', org_slug=organization.slug) }}">← Back to openings</a>
+        <span>/</span>
+        <span>{{ job.title }}</span>
     </div>
-</div>
 
-<div class="container">
-    <div class="card">
-        <div class="card-body">
-            <div class="d-flex justify-content-between align-items-center mb-5">
-                <div>
-                    <h1 class="mb-2" style="color: var(--primary);">{{ job.title }}</h1>
-                    <p class="text-secondary mb-0">{{ organization.name }}</p>
+    <div class="public-card">
+        <header class="job-detail-header">
+            <div>
+                <span class="public-pill">{{ organization.name }}</span>
+                <h1>{{ job.title }}</h1>
+                <div class="job-detail-meta">
+                    {% if published_date %}
+                        <span class="job-chip">Published {{ published_date.strftime('%b %d, %Y') }}</span>
+                    {% endif %}
+                    <span class="job-chip">{{ job.questions.count() }} interview questions prepared</span>
                 </div>
-                <a href="{{ url_for('public.apply_job', org_slug=organization.slug, job_slug=job.public_url_slug) }}" class="btn btn-primary btn-lg">Apply Now</a>
             </div>
-            <div class="job-content">
-                {{ job.description_html|safe }}
-            </div>
+            <a class="public-button" href="{{ url_for('public.apply_job', org_slug=organization.slug, job_slug=job.public_url_slug) }}">
+                Apply now
+            </a>
+        </header>
+
+        <div class="job-description">
+            {{ job.description_html|safe }}
         </div>
     </div>
 </div>

@@ -69,7 +69,7 @@
         <!-- Top Navbar -->
         <nav class="layout-navbar with-sidebar">
             <div class="navbar-content">
-                <button class="mobile-menu-toggle" id="mobileMenuToggle" aria-label="Toggle Menu" type="button">
+                <button class="mobile-menu-toggle" id="mobileMenuToggle" aria-label="Toggle Menu" aria-expanded="true" type="button">
                     <span></span>
                     <span></span>
                     <span></span>
@@ -120,38 +120,90 @@
             return;
         }
         
+        const DESKTOP_BREAKPOINT = 968;
+        const STORAGE_KEY = 'orgSidebarCollapsed';
+
+        const isMobileView = () => window.innerWidth <= DESKTOP_BREAKPOINT;
+
+        const getStoredCollapseState = () => {
+            try {
+                return localStorage.getItem(STORAGE_KEY) === 'true';
+            } catch (error) {
+                console.warn('Unable to access localStorage for sidebar state', error);
+                return false;
+            }
+        };
+
+        const storeCollapseState = (collapsed) => {
+            try {
+                localStorage.setItem(STORAGE_KEY, collapsed ? 'true' : 'false');
+            } catch (error) {
+                console.warn('Unable to persist sidebar state', error);
+            }
+        };
+
+        const closeMobileMenu = () => {
+            sidebar.classList.remove('mobile-open');
+            mobileOverlay.classList.remove('active');
+            mobileMenuToggle.classList.remove('active');
+            mobileMenuToggle.setAttribute('aria-expanded', 'false');
+            document.body.style.overflow = '';
+        };
+
+        const openMobileMenu = () => {
+            sidebar.classList.add('mobile-open');
+            mobileOverlay.classList.add('active');
+            mobileMenuToggle.classList.add('active');
+            mobileMenuToggle.setAttribute('aria-expanded', 'true');
+            document.body.style.overflow = 'hidden';
+        };
+
+        const setDesktopCollapsed = (collapsed, persist = true) => {
+            document.body.classList.toggle('sidebar-collapsed', collapsed);
+            sidebar.classList.remove('mobile-open');
+            mobileOverlay.classList.remove('active');
+            mobileMenuToggle.classList.remove('active');
+            mobileMenuToggle.classList.toggle('collapsed', collapsed);
+            mobileMenuToggle.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+            document.body.style.overflow = '';
+            if (persist) {
+                storeCollapseState(collapsed);
+            }
+        };
+
+        // Apply stored state on load
+        if (!isMobileView()) {
+            setDesktopCollapsed(getStoredCollapseState(), false);
+        } else {
+            setDesktopCollapsed(false, false);
+        }
+
         // Toggle menu on hamburger click
         mobileMenuToggle.addEventListener('click', function(e) {
             e.preventDefault();
-            sidebar.classList.toggle('mobile-open');
-            mobileOverlay.classList.toggle('active');
-            this.classList.toggle('active');
-            
-            // Prevent body scroll when menu is open
-            if (sidebar.classList.contains('mobile-open')) {
-                document.body.style.overflow = 'hidden';
+            if (isMobileView()) {
+                if (sidebar.classList.contains('mobile-open')) {
+                    closeMobileMenu();
+                } else {
+                    openMobileMenu();
+                }
             } else {
-                document.body.style.overflow = '';
+                const shouldCollapse = !document.body.classList.contains('sidebar-collapsed');
+                setDesktopCollapsed(shouldCollapse);
             }
         });
         
         // Close menu on overlay click
         mobileOverlay.addEventListener('click', function() {
-            sidebar.classList.remove('mobile-open');
-            mobileOverlay.classList.remove('active');
-            mobileMenuToggle.classList.remove('active');
-            document.body.style.overflow = '';
+            closeMobileMenu();
         });
         
         // Close menu on menu item click (for better UX on mobile)
         const menuItems = sidebar.querySelectorAll('.menu-item');
         menuItems.forEach(function(item) {
             item.addEventListener('click', function() {
-                if (window.innerWidth <= 968) {
-                    sidebar.classList.remove('mobile-open');
-                    mobileOverlay.classList.remove('active');
-                    mobileMenuToggle.classList.remove('active');
-                    document.body.style.overflow = '';
+                if (isMobileView()) {
+                    closeMobileMenu();
                 }
             });
         });
@@ -161,11 +213,12 @@
         window.addEventListener('resize', function() {
             clearTimeout(resizeTimer);
             resizeTimer = setTimeout(function() {
-                if (window.innerWidth > 968) {
-                    sidebar.classList.remove('mobile-open');
-                    mobileOverlay.classList.remove('active');
-                    mobileMenuToggle.classList.remove('active');
-                    document.body.style.overflow = '';
+                if (isMobileView()) {
+                    setDesktopCollapsed(false, false);
+                    closeMobileMenu();
+                } else {
+                    closeMobileMenu();
+                    setDesktopCollapsed(getStoredCollapseState(), false);
                 }
             }, 250);
         });

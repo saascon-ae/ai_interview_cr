@@ -2,85 +2,20 @@
 
 {% block title %}Interview Complete{% endblock %}
 
-{% block extra_css %}
-<style>
-    .complete-container {
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        min-height: 100vh;
-        background: linear-gradient(135deg, var(--primary) 0%, #5a5cd7 50%, var(--info) 100%);
-        padding: var(--spacing-6);
-    }
-    
-    .complete-card {
-        background: var(--card-bg);
-        padding: var(--spacing-12);
-        border-radius: var(--border-radius-2xl);
-        box-shadow: var(--shadow-2xl);
-        text-align: center;
-        max-width: 600px;
-        width: 100%;
-    }
-    
-    .success-icon {
-        width: 80px;
-        height: 80px;
-        border-radius: var(--border-radius-circle);
-        background: var(--success-light);
-        color: var(--success);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: var(--font-size-5xl);
-        margin: 0 auto var(--spacing-6);
-    }
-    
-    .complete-card h1 {
-        color: var(--text-heading);
-        font-size: var(--font-size-4xl);
-        font-weight: var(--font-weight-semibold);
-        margin-bottom: var(--spacing-5);
-    }
-    
-    .complete-card p {
-        color: var(--text-primary);
-        font-size: var(--font-size-lg);
-        line-height: var(--line-height-relaxed);
-        margin-bottom: var(--spacing-4);
-    }
-    
-    .next-steps {
-        margin-top: var(--spacing-8);
-        padding: var(--spacing-6);
-        background: var(--gray-50);
-        border-radius: var(--border-radius-lg);
-    }
-    
-    .next-steps strong {
-        color: var(--text-heading);
-        font-size: var(--font-size-xl);
-        display: block;
-        margin-bottom: var(--spacing-3);
-    }
-    
-    .next-steps p {
-        font-size: var(--font-size-base);
-        margin-bottom: 0;
-    }
-</style>
+{% block extra_head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/public-portal.css') }}">
 {% endblock %}
 
 {% block content %}
-<div class="complete-container">
-    <div class="complete-card">
-        <div class="success-icon">✓</div>
-        <h1>Thank You For Your Time!</h1>
-        <p>We truly appreciate you sharing your story with us.</p>
-        <p>Our hiring team is carefully reviewing your application and interview responses. If we move forward together, we'll be in touch with the next steps.</p>
-        <div class="next-steps">
-            <strong>What's Next?</strong>
-            <p>You'll receive a confirmation email shortly. Keep an eye on your inbox — we'll reach out if you're being considered for the next phase.</p>
+<div class="public-shell public-shell--centered">
+    <div class="completion-stage">
+        <div class="completion-stage__icon">✓</div>
+        <h1>Thank you for your time!</h1>
+        <p>We appreciate you sharing your experience with us today. Your responses have been captured and will be reviewed alongside your application.</p>
+        <p>You can safely close this window—feel free to revisit your email for updates as we move through the next steps.</p>
+        <div class="completion-next">
+            <strong>What happens next?</strong>
+            <p>Expect a confirmation email shortly. If your profile aligns with the role, our talent team will reach out about upcoming interview rounds.</p>
         </div>
     </div>
 </div>

@@ -6,6 +6,8 @@ from app.utils.auth import org_admin_required, generate_slug, generate_password
 from app.services.ai_service import generate_questions_from_description
 from app.services.email_service import send_user_invitation_email
 from datetime import datetime
+from math import ceil
+from urllib.parse import urlencode
 from sqlalchemy import func
 import traceback
 
@@ -20,35 +22,45 @@ def dashboard():
     total_applications = Application.query.join(Job).filter(
         Job.organization_id == current_user.organization_id
     ).count()
-    
-    # Recent jobs
-    recent_jobs = Job.query.filter_by(
-        organization_id=current_user.organization_id
-    ).order_by(Job.created_at.desc()).limit(5).all()
-    
-    # Add application count for each job
-    for job in recent_jobs:
-        job.application_count = job.applications.count()
+    active_jobs = Job.query.filter_by(
+        organization_id=current_user.organization_id,
+        status='published'
+    ).count()
     
     return render_template('org_admin/dashboard.html', 
                          total_jobs=total_jobs,
                          total_applications=total_applications,
-                         recent_jobs=recent_jobs)
+                         active_jobs=active_jobs)
 
 @org_admin_bp.route('/jobs')
 @login_required
 @org_admin_required
 def jobs():
     # Get all jobs for this organization
-    jobs_list = Job.query.filter_by(
+    page = request.args.get('page', 1, type=int) or 1
+    per_page = 20
+
+    jobs_query = Job.query.filter_by(
         organization_id=current_user.organization_id
-    ).order_by(Job.created_at.desc()).all()
+    ).order_by(Job.created_at.desc())
+
+    jobs_pagination = jobs_query.paginate(page=page, per_page=per_page, error_out=False)
+    jobs_list = jobs_pagination.items
+    
+    if jobs_pagination.pages and page > jobs_pagination.pages:
+        return redirect(url_for('org_admin.jobs', page=jobs_pagination.pages))
     
     # Add application count for each job
     for job in jobs_list:
         job.application_count = job.applications.count()
     
-    return render_template('org_admin/jobs.html', jobs=jobs_list)
+    jobs_stats = {
+        'start_index': ((jobs_pagination.page - 1) * jobs_pagination.per_page + 1) if jobs_pagination.total else 0,
+        'end_index': min(jobs_pagination.page * jobs_pagination.per_page, jobs_pagination.total) if jobs_pagination.total else 0,
+        'total': jobs_pagination.total
+    }
+    
+    return render_template('org_admin/jobs.html', jobs=jobs_list, jobs_pagination=jobs_pagination, jobs_stats=jobs_stats)
 
 @org_admin_bp.route('/jobs/new', methods=['GET', 'POST'])
 @login_required
@@ -251,16 +263,142 @@ def applications():
     # Sort lists (recommended by highest score, others by highest score)
     recommended_applications.sort(key=lambda app: app.score_percentage, reverse=True)
     other_applications.sort(key=lambda app: app.score_percentage, reverse=True)
+
+    # Pagination settings
+    per_page = 20
+    rec_total = len(recommended_applications)
+    other_total = len(other_applications)
+
+    rec_page = request.args.get('rec_page', 1, type=int) or 1
+    other_page = request.args.get('other_page', 1, type=int) or 1
+
+    rec_pages = ceil(rec_total / per_page) if rec_total else 0
+    other_pages = ceil(other_total / per_page) if other_total else 0
+
+    if rec_pages and rec_page > rec_pages:
+        rec_page = rec_pages
+    if other_pages and other_page > other_pages:
+        other_page = other_pages
+
+    rec_page = max(rec_page, 1)
+    other_page = max(other_page, 1)
+
+    rec_start = (rec_page - 1) * per_page if rec_total else 0
+    other_start = (other_page - 1) * per_page if other_total else 0
+
+    recommended_page_items = recommended_applications[rec_start:rec_start + per_page]
+    other_page_items = other_applications[other_start:other_start + per_page]
+
+    def build_page_sequence(total_pages, current_page, edge=1, around=1):
+        if total_pages <= 0:
+            return []
+        sequence = []
+        last = 0
+        for num in range(1, total_pages + 1):
+            if num <= edge or num > total_pages - edge or abs(num - current_page) <= around:
+                if last and last + 1 != num:
+                    sequence.append(None)
+                sequence.append(num)
+                last = num
+        return sequence
+
+    recommended_pagination = {
+        'page': rec_page,
+        'pages': rec_pages,
+        'has_prev': rec_page > 1 and rec_pages > 0,
+        'has_next': rec_pages > 0 and rec_page < rec_pages,
+        'prev_num': rec_page - 1,
+        'next_num': rec_page + 1,
+        'sequence': build_page_sequence(rec_pages, rec_page)
+    }
+
+    other_pagination = {
+        'page': other_page,
+        'pages': other_pages,
+        'has_prev': other_page > 1 and other_pages > 0,
+        'has_next': other_pages > 0 and other_page < other_pages,
+        'prev_num': other_page - 1,
+        'next_num': other_page + 1,
+        'sequence': build_page_sequence(other_pages, other_page)
+    }
+
+    recommended_stats = {
+        'start_index': rec_start + 1 if rec_total else 0,
+        'end_index': min(rec_start + per_page, rec_total) if rec_total else 0,
+        'total': rec_total
+    }
+
+    other_stats = {
+        'start_index': other_start + 1 if other_total else 0,
+        'end_index': min(other_start + per_page, other_total) if other_total else 0,
+        'total': other_total
+    }
+
+    args_dict = request.args.to_dict()
+    recommended_params = {k: v for k, v in args_dict.items() if k != 'rec_page'}
+    other_params = {k: v for k, v in args_dict.items() if k != 'other_page'}
+    
+    def build_applications_link(base_params, **updates):
+        merged = {}
+        merged.update(base_params or {})
+        for key, value in updates.items():
+            if value is None:
+                merged.pop(key, None)
+            else:
+                merged[key] = value
+        clean_params = {k: str(v) for k, v in merged.items() if v not in (None, '')}
+        query_string = urlencode(clean_params, doseq=True)
+        base_url = url_for('org_admin.applications')
+        return f"{base_url}?{query_string}" if query_string else base_url
+    
+    recommended_links = {
+        'prev': build_applications_link(recommended_params, rec_page=recommended_pagination['prev_num']) if recommended_pagination['has_prev'] else None,
+        'next': build_applications_link(recommended_params, rec_page=recommended_pagination['next_num']) if recommended_pagination['has_next'] else None,
+        'pages': []
+    }
+    
+    for num in recommended_pagination['sequence']:
+        if num:
+            recommended_links['pages'].append({
+                'page': num,
+                'url': build_applications_link(recommended_params, rec_page=num),
+                'is_gap': False
+            })
+        else:
+            recommended_links['pages'].append({'is_gap': True})
+    
+    other_links = {
+        'prev': build_applications_link(other_params, other_page=other_pagination['prev_num']) if other_pagination['has_prev'] else None,
+        'next': build_applications_link(other_params, other_page=other_pagination['next_num']) if other_pagination['has_next'] else None,
+        'pages': []
+    }
+    
+    for num in other_pagination['sequence']:
+        if num:
+            other_links['pages'].append({
+                'page': num,
+                'url': build_applications_link(other_params, other_page=num),
+                'is_gap': False
+            })
+        else:
+            other_links['pages'].append({'is_gap': True})
     
     # Get all jobs for filtering dropdown
     jobs_list = Job.query.filter_by(organization_id=current_user.organization_id).all()
     
     return render_template('org_admin/applications.html', 
-                         recommended_applications=recommended_applications,
-                         other_applications=other_applications,
+                         recommended_applications=recommended_page_items,
+                         recommended_pagination=recommended_pagination,
+                         recommended_stats=recommended_stats,
+                         recommended_links=recommended_links,
+                         other_applications=other_page_items,
+                         other_pagination=other_pagination,
+                         other_stats=other_stats,
+                         other_links=other_links,
                          jobs=jobs_list,
                          selected_job=selected_job,
-                         job_id=job_id)
+                         job_id=job_id,
+                         per_page=per_page)
 
 @org_admin_bp.route('/applications/<int:application_id>')
 @login_required

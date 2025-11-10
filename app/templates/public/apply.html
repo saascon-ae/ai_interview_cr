@@ -2,62 +2,66 @@
 
 {% block title %}Apply - {{ job.title }}{% endblock %}
 
+{% block extra_head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/public-portal.css') }}">
+{% endblock %}
+
 {% block content %}
-<div class="container" style="padding-top: var(--spacing-8); padding-bottom: var(--spacing-8);">
-    <div style="max-width: 600px; margin: 0 auto;">
-        <div class="mb-5">
-            <a href="{{ url_for('public.job_detail', org_slug=organization.slug, job_slug=job.public_url_slug) }}" class="btn btn-secondary">← Back to Job Details</a>
-        </div>
-        
-        <div class="card">
-            <div class="card-body">
-                <h2 class="card-title" style="color: var(--primary);">Apply for {{ job.title }}</h2>
-                
-                <div class="alert alert-info">
-                    <strong>Next Steps:</strong>
-                    <p class="mb-0">After submitting this form, you'll proceed to a voice-based pre-screening interview. The AI will ask you relevant questions about the position. Please ensure you're in a quiet environment with a working microphone.</p>
-                </div>
-                
-                {% with messages = get_flashed_messages(with_categories=true) %}
-                    {% if messages %}
-                        {% for category, message in messages %}
-                            <div class="alert alert-{{ category }}">{{ message }}</div>
-                        {% endfor %}
-                    {% endif %}
-                {% endwith %}
-                
-                <form id="job-application-form" method="POST" enctype="multipart/form-data">
-                    <div class="form-group">
-                        <label for="first_name" class="form-label">First Name *</label>
-                        <input type="text" id="first_name" name="first_name" class="form-control" required>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label for="last_name" class="form-label">Last Name *</label>
-                        <input type="text" id="last_name" name="last_name" class="form-control" required>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label for="email" class="form-label">Email *</label>
-                        <input type="email" id="email" name="email" class="form-control" required>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label for="phone" class="form-label">Phone *</label>
-                        <input type="tel" id="phone" name="phone" class="form-control" required>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label for="cv" class="form-label">Upload CV (PDF, DOC, DOCX) *</label>
-                        <input type="file" id="cv" name="cv" class="form-control" accept=".pdf,.doc,.docx" required>
-                    </div>
-                    
-                    <input type="hidden" id="local_time" name="local_time">
-                    <input type="hidden" id="timezone" name="timezone">
-                    
-                    <button type="submit" class="btn btn-primary w-100 btn-lg" style="margin-top: var(--spacing-4);">Submit & Start Interview</button>
-                </form>
+<div class="public-shell">
+    <div class="public-breadcrumb">
+        <a href="{{ url_for('public.job_detail', org_slug=organization.slug, job_slug=job.public_url_slug) }}">← Back to job details</a>
+        <span>/</span>
+        <span>Application</span>
+    </div>
+
+    <div class="apply-layout">
+        <div class="public-card apply-card">
+            <h2 style="margin-bottom: 1.5rem;">Apply for {{ job.title }}</h2>
+
+            <div class="alert alert-info">
+                <strong>Next steps</strong>
+                <p class="mb-0">Submit your details and upload your CV. You’ll immediately launch our AI-led pre-screening experience, so ensure you’re in a quiet space with a working microphone.</p>
             </div>
+
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ category }}">{{ message }}</div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+
+            <form id="job-application-form" method="POST" enctype="multipart/form-data">
+                <div class="form-group">
+                    <label for="first_name" class="form-label">First Name *</label>
+                    <input type="text" id="first_name" name="first_name" class="form-control" placeholder="Jordan" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="last_name" class="form-label">Last Name *</label>
+                    <input type="text" id="last_name" name="last_name" class="form-control" placeholder="Reeves" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="email" class="form-label">Email *</label>
+                    <input type="email" id="email" name="email" class="form-control" placeholder="you@example.com" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="phone" class="form-label">Phone *</label>
+                    <input type="tel" id="phone" name="phone" class="form-control" placeholder="+1 415 555 1234" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="cv" class="form-label">Upload CV (PDF, DOC, DOCX) *</label>
+                    <input type="file" id="cv" name="cv" class="form-control" accept=".pdf,.doc,.docx" required>
+                </div>
+
+                <input type="hidden" id="local_time" name="local_time">
+                <input type="hidden" id="timezone" name="timezone">
+
+                <button type="submit" class="btn btn-primary w-100 btn-lg" style="margin-top: 1.4rem;">Submit &amp; start interview</button>
+            </form>
         </div>
     </div>
 </div>

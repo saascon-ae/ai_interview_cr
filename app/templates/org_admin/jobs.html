@@ -100,6 +100,120 @@ body {
 .btn-edit:hover svg {
     transform: scale(1.1);
 }
+
+.search-input {
+    width: 100%;
+    max-width: 320px;
+    padding: var(--spacing-3);
+    border: 1px solid var(--border-light);
+    border-radius: var(--border-radius-md);
+    font-size: var(--font-size-base);
+    background-color: #ffffff;
+    color: #333333;
+}
+
+.search-input:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(105, 108, 255, 0.1);
+    background-color: #ffffff;
+}
+
+.search-input::placeholder {
+    color: #999999;
+}
+
+.no-results {
+    text-align: center;
+    padding: var(--spacing-6) 0;
+    color: var(--text-secondary);
+    display: none;
+}
+
+.table-controls {
+    display: flex;
+    justify-content: flex-end;
+    padding: 0 var(--spacing-4) var(--spacing-3);
+}
+
+.table-pagination {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--spacing-3) var(--spacing-4);
+    background: var(--surface-color, #ffffff);
+    border-top: 1px solid var(--border-light);
+    gap: var(--spacing-3);
+    flex-wrap: wrap;
+}
+
+.pagination-info {
+    font-size: 13px;
+    color: var(--text-secondary);
+}
+
+.pagination-controls {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-2);
+}
+
+.pagination-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 6px 12px;
+    border-radius: var(--border-radius-sm);
+    border: 1px solid var(--border-light);
+    background: #ffffff;
+    color: var(--text-primary);
+    font-size: 13px;
+    font-weight: 600;
+    text-decoration: none;
+    transition: all 0.2s ease;
+}
+
+.pagination-button:hover {
+    border-color: var(--primary);
+    color: var(--primary);
+    box-shadow: 0 2px 6px rgba(105, 108, 255, 0.15);
+}
+
+.pagination-button--active {
+    background: var(--primary);
+    color: #ffffff;
+    border-color: var(--primary);
+}
+
+.pagination-button--disabled {
+    background: var(--bg-secondary);
+    color: var(--text-secondary);
+    border-color: var(--border-light);
+    cursor: not-allowed;
+    pointer-events: none;
+}
+
+.sortable-header {
+    cursor: pointer;
+    user-select: none;
+    position: relative;
+    padding-right: 18px;
+}
+
+.sortable-header .sort-icon {
+    position: absolute;
+    right: 4px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 12px;
+    color: var(--text-secondary);
+    transition: color 0.2s ease;
+}
+
+.sortable-header:hover .sort-icon,
+.sortable-header .sort-icon.active {
+    color: var(--primary);
+}
 </style>
 {% endblock %}
 
@@ -125,21 +239,37 @@ body {
         </div>
     </div>
     
+    {% if jobs %}
     <div class="table-container">
-        {% if jobs %}
-        <table class="table">
+        <div class="table-controls">
+            <input type="text" id="jobSearch" class="search-input" placeholder="🔍 Search jobs by title...">
+        </div>
+        <table class="table" id="jobsTable">
             <thead>
                 <tr>
-                    <th>Job Title</th>
-                    <th>Status</th>
-                    <th>Publish Date</th>
-                    <th>Applicants</th>
+                    <th class="sortable-header" data-column="title">
+                        Job Title <span class="sort-icon">⇅</span>
+                    </th>
+                    <th class="sortable-header" data-column="status">
+                        Status <span class="sort-icon">⇅</span>
+                    </th>
+                    <th class="sortable-header" data-column="date">
+                        Publish Date <span class="sort-icon">⇅</span>
+                    </th>
+                    <th class="sortable-header" data-column="applicants">
+                        Applicants <span class="sort-icon">⇅</span>
+                    </th>
                     <th>Actions</th>
                 </tr>
             </thead>
-            <tbody>
+            <tbody id="jobsTableBody">
                 {% for job in jobs %}
-                <tr>
+                <tr 
+                    data-title="{{ job.title|lower }}"
+                    data-status="{{ job.status|lower }}"
+                    data-applicants="{{ job.application_count }}"
+                    data-date="{{ job.published_at.strftime('%Y%m%d') if job.published_at else '' }}"
+                >
                     <td data-label="Job Title"><strong>{{ job.title }}</strong></td>
                     <td data-label="Status">
                         <span class="status-badge status-{{ job.status }}">{{ job.status.capitalize() }}</span>
@@ -171,12 +301,45 @@ body {
                 {% endfor %}
             </tbody>
         </table>
-        {% else %}
+        {% if jobs_stats.total > 0 %}
+        <div id="jobsPagination" class="table-pagination">
+            <span class="pagination-info">
+                Showing {{ jobs_stats.start_index }} – {{ jobs_stats.end_index }} of {{ jobs_stats.total }} jobs
+            </span>
+            <div class="pagination-controls">
+                {% if jobs_pagination.has_prev %}
+                <a class="pagination-button" href="{{ url_for('org_admin.jobs', page=jobs_pagination.prev_num) }}">Previous</a>
+                {% else %}
+                <span class="pagination-button pagination-button--disabled">Previous</span>
+                {% endif %}
+
+                {% for page_num in jobs_pagination.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
+                    {% if page_num %}
+                        <a class="pagination-button {% if page_num == jobs_pagination.page %}pagination-button--active{% endif %}" href="{{ url_for('org_admin.jobs', page=page_num) }}">{{ page_num }}</a>
+                    {% else %}
+                        <span class="pagination-button pagination-button--disabled">&hellip;</span>
+                    {% endif %}
+                {% endfor %}
+
+                {% if jobs_pagination.has_next %}
+                <a class="pagination-button" href="{{ url_for('org_admin.jobs', page=jobs_pagination.next_num) }}">Next</a>
+                {% else %}
+                <span class="pagination-button pagination-button--disabled">Next</span>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+        <div id="jobsNoResults" class="no-results">
+            <p>No jobs found matching your search.</p>
+        </div>
+    </div>
+    {% else %}
+    <div class="table-container">
         <div class="text-center" style="padding: var(--spacing-8);">
             <p class="text-muted">No jobs found. <a href="{{ url_for('org_admin.new_job') }}">Create your first job</a></p>
         </div>
-        {% endif %}
     </div>
+    {% endif %}
 {% endcall %}
 {% endblock %}
 
@@ -230,6 +393,128 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     });
+
+    const jobSearchInput = document.getElementById('jobSearch');
+    const jobsTableBody = document.getElementById('jobsTableBody');
+    const jobsNoResults = document.getElementById('jobsNoResults');
+    const jobsTable = document.getElementById('jobsTable');
+    const jobsPagination = document.getElementById('jobsPagination');
+
+    if (jobsTableBody) {
+        Array.from(jobsTableBody.querySelectorAll('tr')).forEach((row, index) => {
+            row.setAttribute('data-original-index', index);
+        });
+    }
+
+    if (jobSearchInput && jobsTableBody) {
+        jobSearchInput.addEventListener('input', function() {
+            const searchTerm = this.value.toLowerCase().trim();
+            const rows = jobsTableBody.querySelectorAll('tr');
+            let visibleCount = 0;
+
+            rows.forEach(row => {
+                const title = row.getAttribute('data-title') || '';
+                const matches = title.includes(searchTerm);
+
+                if (!searchTerm || matches) {
+                    row.style.display = '';
+                    visibleCount++;
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+
+            if (jobsNoResults) {
+                jobsNoResults.style.display = visibleCount === 0 && searchTerm ? 'block' : 'none';
+            }
+
+            if (jobsPagination) {
+                jobsPagination.style.display = visibleCount === 0 ? 'none' : 'flex';
+            }
+        });
+    }
+
+    if (jobsTable) {
+        const sortState = { column: null, direction: 'none' };
+        const headers = jobsTable.querySelectorAll('.sortable-header');
+
+        const updateIcons = (activeHeader, direction) => {
+            headers.forEach(header => {
+                const icon = header.querySelector('.sort-icon');
+                if (!icon) {
+                    return;
+                }
+
+                if (header === activeHeader) {
+                    if (direction === 'none') {
+                        icon.classList.remove('active');
+                        icon.textContent = '⇅';
+                    } else {
+                        icon.classList.add('active');
+                        icon.textContent = direction === 'asc' ? '↑' : '↓';
+                    }
+                } else {
+                    icon.classList.remove('active');
+                    icon.textContent = '⇅';
+                }
+            });
+        };
+
+        const compareValues = (a, b, column, direction) => {
+            let aValue;
+            let bValue;
+
+            switch (column) {
+                case 'title':
+                    aValue = a.getAttribute('data-title') || '';
+                    bValue = b.getAttribute('data-title') || '';
+                    return direction === 'asc' ? aValue.localeCompare(bValue) : bValue.localeCompare(aValue);
+                case 'status':
+                    aValue = a.getAttribute('data-status') || '';
+                    bValue = b.getAttribute('data-status') || '';
+                    return direction === 'asc' ? aValue.localeCompare(bValue) : bValue.localeCompare(aValue);
+                case 'date':
+                    aValue = parseInt(a.getAttribute('data-date') || '0', 10);
+                    bValue = parseInt(b.getAttribute('data-date') || '0', 10);
+                    return direction === 'asc' ? aValue - bValue : bValue - aValue;
+                case 'applicants':
+                    aValue = parseInt(a.getAttribute('data-applicants') || '0', 10);
+                    bValue = parseInt(b.getAttribute('data-applicants') || '0', 10);
+                    return direction === 'asc' ? aValue - bValue : bValue - aValue;
+                default:
+                    return 0;
+            }
+        };
+
+        headers.forEach(header => {
+            header.addEventListener('click', () => {
+                const column = header.getAttribute('data-column');
+                if (!column) {
+                    return;
+                }
+
+                let direction = 'asc';
+                if (sortState.column === column) {
+                    direction = sortState.direction === 'asc' ? 'desc' : sortState.direction === 'desc' ? 'none' : 'asc';
+                }
+
+                sortState.column = direction === 'none' ? null : column;
+                sortState.direction = direction;
+
+                updateIcons(header, direction);
+
+                const rows = Array.from(jobsTableBody.querySelectorAll('tr'));
+
+                if (direction === 'none') {
+                    rows.sort((a, b) => parseInt(a.getAttribute('data-original-index'), 10) - parseInt(b.getAttribute('data-original-index'), 10));
+                } else {
+                    rows.sort((a, b) => compareValues(a, b, column, direction));
+                }
+
+                rows.forEach(row => jobsTableBody.appendChild(row));
+            });
+        });
+    }
 });
 
 function copyToClipboard(url, button, tooltip, originalText) {

@@ -32,6 +32,10 @@
   left: var(--sidebar-width);
 }
 
+body.sidebar-collapsed .layout-navbar.with-sidebar {
+  left: 0;
+}
+
 .navbar-content {
   display: flex;
   align-items: center;
@@ -87,6 +91,12 @@
   .layout-sidebar.mobile-open {
     transform: translateX(0);
     box-shadow: var(--shadow-lg);
+  }
+}
+
+@media (min-width: 969px) {
+  body.sidebar-collapsed .layout-sidebar {
+    transform: translateX(-100%);
   }
 }
 
@@ -202,6 +212,10 @@
 
 .layout-content.with-sidebar {
   margin-left: var(--sidebar-width);
+}
+
+body.sidebar-collapsed .layout-content.with-sidebar {
+  margin-left: 0;
 }
 
 .content-wrapper {
@@ -638,7 +652,7 @@
 
 /* ========== Hamburger Menu ========== */
 .mobile-menu-toggle {
-  display: none;
+  display: flex;
   background: none;
   border: none;
   cursor: pointer;

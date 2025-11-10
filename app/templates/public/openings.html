@@ -2,106 +2,99 @@
 
 {% block title %}Job Openings - {{ organization.name }}{% endblock %}
 
-{% block extra_css %}
-<style>
-    .org-header {
-        background: var(--card-bg);
-        padding: var(--spacing-8) 0;
-        box-shadow: var(--shadow-sm);
-        margin-bottom: var(--spacing-8);
-    }
-    
-    .org-header-content {
-        max-width: 1200px;
-        margin: 0 auto;
-        padding: 0 var(--content-padding);
-        display: flex;
-        align-items: center;
-        gap: var(--spacing-6);
-    }
-    
-    .org-logo {
-        height: 64px;
-        width: auto;
-        border-radius: var(--border-radius-lg);
-        box-shadow: var(--shadow-xs);
-    }
-    
-    .org-logo-placeholder {
-        height: 64px;
-        width: 64px;
-        border-radius: var(--border-radius-lg);
-        background: var(--primary-light);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-weight: var(--font-weight-bold);
-        font-size: var(--font-size-2xl);
-        color: var(--primary);
-    }
-    
-    .org-info h1 {
-        font-size: var(--font-size-3xl);
-        font-weight: var(--font-weight-semibold);
-        color: var(--text-heading);
-        margin-bottom: var(--spacing-1);
-    }
-    
-    .org-info p {
-        color: var(--text-secondary);
-        font-size: var(--font-size-base);
-    }
-</style>
+{% block extra_head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/public-portal.css') }}">
 {% endblock %}
 
 {% block content %}
-<div class="org-header">
-    <div class="org-header-content">
-        {% if organization.logo_path %}
-            <img src="{{ url_for('static', filename=organization.logo_path) }}" alt="{{ organization.name }}" class="org-logo">
-        {% else %}
-            <div class="org-logo-placeholder">{{ organization.name[:2]|upper }}</div>
-        {% endif %}
-        <div class="org-info">
+<div class="public-shell">
+    <div class="public-hero">
+        <div class="public-hero__logo">
+            {% if organization.logo_path %}
+                <img src="{{ url_for('static', filename=organization.logo_path) }}" alt="{{ organization.name }} logo">
+            {% else %}
+                <span class="public-hero__logo--placeholder">{{ organization.name[:2]|upper }}</span>
+            {% endif %}
+        </div>
+        <div class="public-hero__content">
+            <span class="public-pill">Now hiring</span>
             <h1>{{ organization.name }}</h1>
-            <p>Career Opportunities</p>
+            <p>Discover current openings and join a team that’s redefining the candidate experience with AI-guided interviews.</p>
         </div>
     </div>
-</div>
 
-<div class="container">
-    <div class="page-header">
-        <div class="page-header-content">
-            <h2 class="page-title">Open Positions</h2>
-        </div>
-    </div>
-    
-    <div class="job-grid">
-        {% if jobs %}
+{% if jobs %}
+        <div class="job-gallery">
             {% for job in jobs %}
-            <div class="job-card">
-                <div class="job-header">
+            {% set published_date = job.published_at or job.created_at %}
+            {% set summary_text = (job.description_html|striptags)|replace('\n', ' ') %}
+            <article class="job-card">
+                <div class="job-card__top">
                     <div>
-                        <h3 class="job-title">{{ job.title }}</h3>
-                        <p class="job-company">{{ organization.name }}</p>
+                        <div class="job-card__posted">
+                            {% if published_date %}
+                                Published {{ published_date.strftime('%b %d, %Y') }}
+                            {% else %}
+                                Published recently
+                            {% endif %}
+                        </div>
+                        <h3 class="job-card__title">{{ job.title }}</h3>
                     </div>
                 </div>
-                <div class="job-meta">
-                    <span class="job-meta-item">
-                        📅 Posted: {{ job.published_at.strftime('%d-%m-%Y') if job.published_at else 'Recently' }}
-                    </span>
+
+                {% if summary_text %}
+                <p class="job-card__description">
+                    {{ summary_text|truncate(150, True, '…') }}
+                </p>
+                {% endif %}
+
+                <div class="job-card__meta">
+                    <div class="job-card__chips">
+                        <span class="job-chip">{{ job.questions.count() }} interview questions</span>
+                    </div>
+                    <a class="public-button" href="{{ url_for('public.job_detail', org_slug=organization.slug, job_slug=job.public_url_slug) }}">
+                        View Details
+                    </a>
                 </div>
-                <a href="{{ url_for('public.job_detail', org_slug=organization.slug, job_slug=job.public_url_slug) }}" class="btn btn-primary">View Details & Apply</a>
-            </div>
+            </article>
             {% endfor %}
-        {% else %}
-            <div class="card">
-                <div class="card-body text-center">
-                    <p class="text-muted">No open positions at the moment. Please check back later.</p>
-                </div>
-            </div>
+        </div>
+        {% if pagination and pagination.pages > 1 %}
+        <nav class="public-pagination" aria-label="Job listings pagination">
+            <ul class="public-pagination__list">
+                {% if pagination.has_prev %}
+                <li class="public-pagination__item">
+                    <a class="public-pagination__link public-pagination__link--control" href="{{ url_for('public.organization_openings', org_slug=organization.slug, page=pagination.prev_num) }}" aria-label="Previous page">
+                        ‹
+                    </a>
+                </li>
+                {% endif %}
+                {% for page_num in pagination.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
+                    {% if page_num %}
+                        <li class="public-pagination__item">
+                            <a class="public-pagination__link {% if page_num == pagination.page %}public-pagination__link--active{% endif %}" href="{{ url_for('public.organization_openings', org_slug=organization.slug, page=page_num) }}">
+                                {{ page_num }}
+                            </a>
+                        </li>
+                    {% else %}
+                        <li class="public-pagination__item public-pagination__item--ellipsis">…</li>
+                    {% endif %}
+                {% endfor %}
+                {% if pagination.has_next %}
+                <li class="public-pagination__item">
+                    <a class="public-pagination__link public-pagination__link--control" href="{{ url_for('public.organization_openings', org_slug=organization.slug, page=pagination.next_num) }}" aria-label="Next page">
+                        ›
+                    </a>
+                </li>
+                {% endif %}
+            </ul>
+        </nav>
         {% endif %}
-    </div>
+    {% else %}
+        <div class="empty-state">
+            No open positions are available right now. Please check back soon or follow us on social for new roles.
+        </div>
+    {% endif %}
 </div>
 {% endblock %}
 

@@ -16,13 +16,13 @@ The AI Prompts Management system allows super administrators to view, edit, and 
 
 ## Setup
 
-### 1. Run Migration (First Time Only)
+### 1. Run Database Migration (First Time Only)
 
 ```bash
-python migrate_add_ai_prompts.py
+FLASK_APP=run.py flask db upgrade
 ```
 
-This creates the `ai_prompts` table in your database.
+This applies the latest Alembic migrations, including the one that creates the `ai_prompts` table.
 
 ### 2. Initialize Default Prompts
 
