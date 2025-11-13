@@ -7,6 +7,7 @@ from app.utils.validators import save_uploaded_file
 from app.services.email_service import send_invitation_email
 from werkzeug.utils import secure_filename
 import os
+import math
 
 super_admin_bp = Blueprint('super_admin', __name__)
 
@@ -15,6 +16,14 @@ super_admin_bp = Blueprint('super_admin', __name__)
 @super_admin_required
 def dashboard():
     organizations = Organization.query.order_by(Organization.created_at.desc()).all()
+    
+    def format_size(size_bytes):
+        """Convert bytes to human readable format"""
+        for unit in ['B', 'KB', 'MB', 'GB']:
+            if size_bytes < 1024.0:
+                return f"{size_bytes:.2f} {unit}"
+            size_bytes /= 1024.0
+        return f"{size_bytes:.2f} TB"
     
     # Calculate statistics for each organization
     org_stats = []
@@ -56,24 +65,134 @@ def dashboard():
                         except OSError:
                             pass
         
-        # Format file sizes
-        def format_size(size_bytes):
-            """Convert bytes to human readable format"""
-            for unit in ['B', 'KB', 'MB', 'GB']:
-                if size_bytes < 1024.0:
-                    return f"{size_bytes:.2f} {unit}"
-                size_bytes /= 1024.0
-            return f"{size_bytes:.2f} TB"
-        
+        # Preserve raw bytes for summary cards
+        cv_total_bytes = cv_total_size
+        audio_total_bytes = audio_total_size
+
         org_stats.append({
             'organization': org,
             'total_jobs': total_jobs,
             'total_candidates': total_candidates,
-            'cv_total_size': format_size(cv_total_size),
-            'audio_total_size': format_size(audio_total_size)
+            'cv_total_size': format_size(cv_total_bytes),
+            'audio_total_size': format_size(audio_total_bytes),
+            'cv_total_bytes': cv_total_bytes,
+            'audio_total_bytes': audio_total_bytes
         })
     
-    return render_template('super_admin/dashboard.html', org_stats=org_stats)
+    search_query = request.args.get('search', '').strip()
+    if search_query:
+        search_lower = search_query.lower()
+        filtered_stats = []
+        for stat in org_stats:
+            org = stat['organization']
+            contact_name = f"{(org.first_name or '').strip()} {(org.last_name or '').strip()}".strip()
+            if (
+                search_lower in (org.name or '').lower() or
+                search_lower in (org.email or '').lower() or
+                search_lower in contact_name.lower()
+            ):
+                filtered_stats.append(stat)
+        org_stats = filtered_stats
+
+    sort_by = request.args.get('sort', 'name')
+    sort_direction = request.args.get('direction', 'asc')
+    sort_direction = 'desc' if sort_direction == 'desc' else 'asc'
+
+    def contact_key(stat):
+        org = stat['organization']
+        return f"{(org.first_name or '').strip()} {(org.last_name or '').strip()}".strip().lower()
+
+    sort_key_map = {
+        'name': lambda stat: (stat['organization'].name or '').lower(),
+        'email': lambda stat: (stat['organization'].email or '').lower(),
+        'contact': contact_key,
+        'jobs': lambda stat: stat['total_jobs'],
+        'candidates': lambda stat: stat['total_candidates'],
+        'cv_storage': lambda stat: stat['cv_total_bytes'],
+        'audio_storage': lambda stat: stat['audio_total_bytes'],
+        'status': lambda stat: (stat['organization'].status or '').lower(),
+    }
+    sort_key = sort_key_map.get(sort_by, sort_key_map['name'])
+    org_stats.sort(key=sort_key, reverse=(sort_direction == 'desc'))
+
+    total_jobs = sum(stat['total_jobs'] for stat in org_stats)
+    total_candidates = sum(stat['total_candidates'] for stat in org_stats)
+    total_cv_bytes = sum(stat['cv_total_bytes'] for stat in org_stats)
+    total_audio_bytes = sum(stat['audio_total_bytes'] for stat in org_stats)
+    active_count = sum(1 for stat in org_stats if stat['organization'].status == 'active')
+    inactive_count = sum(1 for stat in org_stats if stat['organization'].status == 'inactive')
+
+    summary = {
+        'organizations': len(org_stats),
+        'active_orgs': active_count,
+        'inactive_orgs': inactive_count,
+        'total_jobs': total_jobs,
+        'total_candidates': total_candidates,
+        'cv_storage': format_size(total_cv_bytes) if org_stats else '0.00 B',
+        'audio_storage': format_size(total_audio_bytes) if org_stats else '0.00 B'
+    }
+
+    page = request.args.get('page', 1, type=int)
+    page = max(page, 1)
+    per_page = 10
+    total_items = len(org_stats)
+    if total_items:
+        total_pages = max(1, math.ceil(total_items / per_page))
+        page = min(page, total_pages)
+    else:
+        page = 1
+        total_pages = 1
+    start_idx = (page - 1) * per_page
+    end_idx = start_idx + per_page
+    paginated_stats = org_stats[start_idx:end_idx]
+
+    pagination = {
+        'page': page,
+        'per_page': per_page,
+        'total_items': total_items,
+        'total_pages': total_pages,
+        'has_prev': page > 1,
+        'has_next': page < total_pages
+    }
+
+    return render_template(
+        'super_admin/dashboard.html',
+        org_stats=paginated_stats,
+        summary=summary,
+        search=search_query,
+        sort_by=sort_by,
+        sort_direction=sort_direction,
+        pagination=pagination
+    )
+
+@super_admin_bp.route('/organization/<int:org_id>/jobs')
+@login_required
+@super_admin_required
+def organization_jobs(org_id):
+    organization = Organization.query.get_or_404(org_id)
+    page = request.args.get('page', 1, type=int) or 1
+    per_page = 20
+
+    jobs_query = Job.query.filter_by(organization_id=org_id).order_by(Job.created_at.desc())
+    jobs_pagination = jobs_query.paginate(page=page, per_page=per_page, error_out=False)
+    jobs_list = jobs_pagination.items
+
+    for job in jobs_list:
+        job.application_count = job.applications.count()
+
+    jobs_stats = {
+        'start_index': ((jobs_pagination.page - 1) * jobs_pagination.per_page + 1) if jobs_pagination.total else 0,
+        'end_index': min(jobs_pagination.page * jobs_pagination.per_page, jobs_pagination.total) if jobs_pagination.total else 0,
+        'total': jobs_pagination.total
+    }
+
+    return render_template(
+        'super_admin/organization_jobs.html',
+        organization=organization,
+        jobs=jobs_list,
+        jobs_pagination=jobs_pagination,
+        jobs_stats=jobs_stats
+    )
 
 @super_admin_bp.route('/change-password', methods=['GET', 'POST'])
 @login_required

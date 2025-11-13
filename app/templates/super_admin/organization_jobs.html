@@ -1,0 +1,329 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ organization.name }} Jobs - Super Admin{% endblock %}
+
+{% block extra_css %}
+<style>
+    .dashboard-shell {
+        min-height: calc(100vh - 140px);
+        padding: var(--spacing-10) 0;
+        background: radial-gradient(circle at top left, rgba(105, 108, 255, 0.18), rgba(15, 23, 42, 0)) no-repeat;
+    }
+
+    .dashboard-card {
+        background: linear-gradient(145deg, rgba(255, 255, 255, 0.82), rgba(255, 255, 255, 0.96));
+        border-radius: var(--border-radius-2xl, 28px);
+        box-shadow: 0 30px 60px rgba(15, 23, 42, 0.12);
+        padding: clamp(var(--spacing-6), 3vw, var(--spacing-8));
+        border: 1px solid rgba(148, 163, 184, 0.18);
+        backdrop-filter: blur(12px);
+    }
+
+    .page-header {
+        display: flex;
+        flex-direction: column;
+        gap: var(--spacing-4);
+        margin-bottom: clamp(var(--spacing-5), 3vw, var(--spacing-7));
+    }
+
+    .page-header-content {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: var(--spacing-4);
+    }
+
+    .page-title {
+        margin: 0;
+        font-size: clamp(1.8rem, 2.4vw, 2.6rem);
+        font-weight: var(--font-weight-semibold);
+        letter-spacing: -0.02em;
+    }
+
+    .page-subtitle {
+        margin: var(--spacing-1) 0 0;
+        color: var(--text-secondary);
+        font-size: 0.95rem;
+        max-width: 60ch;
+    }
+
+    .page-actions {
+        display: inline-flex;
+        flex-wrap: wrap;
+        gap: var(--spacing-2);
+    }
+
+    .page-actions .btn {
+        border-radius: var(--border-radius-lg, 14px);
+        padding: var(--spacing-2) var(--spacing-4);
+        font-weight: var(--font-weight-medium);
+        border: none;
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .page-actions .btn-primary {
+        background: linear-gradient(135deg, var(--primary), #3a3fff);
+        color: white;
+        box-shadow: 0 16px 28px rgba(105, 108, 255, 0.22);
+    }
+
+    .page-actions .btn-secondary {
+        background: rgba(105, 108, 255, 0.08);
+        color: var(--primary-dark, #4c4ff7);
+        border: 1px solid rgba(105, 108, 255, 0.18);
+    }
+
+    .page-actions .btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 18px 34px rgba(105, 108, 255, 0.25);
+    }
+
+    .table-container {
+        display: flex;
+        flex-direction: column;
+        gap: var(--spacing-4);
+    }
+
+    .table-summary {
+        display: flex;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: var(--spacing-2);
+        font-size: 0.9rem;
+        color: var(--text-secondary);
+    }
+
+    .table-wrapper {
+        border-radius: var(--border-radius-xl, 24px);
+        overflow: hidden;
+        border: 1px solid rgba(148, 163, 184, 0.18);
+        background: white;
+        box-shadow: 0 24px 48px rgba(15, 23, 42, 0.1);
+    }
+
+    table {
+        width: 100%;
+        border-collapse: separate;
+        border-spacing: 0;
+    }
+
+    table thead {
+        background: rgba(105, 108, 255, 0.08);
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        font-size: 0.75rem;
+        color: var(--text-secondary);
+    }
+
+    th,
+    td {
+        padding: var(--spacing-4);
+        border-bottom: 1px solid rgba(226, 232, 240, 0.7);
+        text-align: left;
+        vertical-align: middle;
+    }
+
+    tbody tr:hover {
+        background: rgba(105, 108, 255, 0.03);
+    }
+
+    .status-badge {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0.3rem 0.65rem;
+        border-radius: 999px;
+        font-size: 0.72rem;
+        font-weight: var(--font-weight-semibold);
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+    }
+
+    .status-published {
+        background: rgba(34, 197, 94, 0.12);
+        color: #15803d;
+        border: 1px solid rgba(34, 197, 94, 0.28);
+    }
+
+    .status-draft {
+        background: rgba(250, 204, 21, 0.16);
+        color: #92400e;
+        border: 1px solid rgba(250, 204, 21, 0.3);
+    }
+
+    .status-ended {
+        background: rgba(148, 163, 184, 0.16);
+        color: #475569;
+        border: 1px solid rgba(148, 163, 184, 0.3);
+    }
+
+    .pagination-nav {
+        display: flex;
+        justify-content: flex-end;
+    }
+
+    .pagination-list {
+        display: inline-flex;
+        align-items: center;
+        gap: var(--spacing-2);
+        list-style: none;
+        padding: 0;
+        margin: 0;
+    }
+
+    .pagination-link {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 36px;
+        height: 36px;
+        padding: 0 var(--spacing-2);
+        border-radius: var(--border-radius-md, 12px);
+        border: 1px solid rgba(148, 163, 184, 0.35);
+        background: rgba(255, 255, 255, 0.9);
+        color: var(--text-body);
+        font-size: 0.85rem;
+        font-weight: var(--font-weight-medium);
+        text-decoration: none;
+        transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+    }
+
+    .pagination-link:hover {
+        background: rgba(105, 108, 255, 0.1);
+        border-color: rgba(105, 108, 255, 0.25);
+        transform: translateY(-1px);
+        box-shadow: 0 12px 24px rgba(105, 108, 255, 0.18);
+    }
+
+    .pagination-link.is-active {
+        background: linear-gradient(135deg, var(--primary), #3a3fff);
+        color: white;
+        border: none;
+        box-shadow: 0 18px 36px rgba(105, 108, 255, 0.24);
+    }
+
+    .pagination-link.is-disabled {
+        pointer-events: none;
+        opacity: 0.45;
+        box-shadow: none;
+        transform: none;
+    }
+
+    .empty-state {
+        padding: var(--spacing-8);
+        text-align: center;
+        color: var(--text-secondary);
+    }
+
+    @media (max-width: 768px) {
+        .dashboard-card {
+            padding: var(--spacing-5);
+        }
+
+        table {
+            display: block;
+            overflow-x: auto;
+            white-space: nowrap;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="dashboard-shell">
+    <div class="container">
+        <div class="dashboard-card">
+            <div class="page-header">
+                <div class="page-header-content">
+                    <div>
+                        <h1 class="page-title">{{ organization.name }}</h1>
+                        <p class="page-subtitle">
+                            Showing job postings across the organization. Published roles include quick links to their public view.
+                        </p>
+                    </div>
+                    <div class="page-actions">
+                        <a href="{{ url_for('super_admin.dashboard') }}" class="btn btn-secondary">← Back to Dashboard</a>
+                        {% if organization.slug %}
+                        <a href="{{ url_for('public.organization_openings', org_slug=organization.slug) }}" class="btn btn-primary" target="_blank" rel="noopener">
+                            View Public Openings
+                        </a>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <section class="table-container">
+                <div class="table-summary">
+                    <span>Total Jobs: <strong>{{ jobs_stats.total }}</strong></span>
+                    {% if jobs_stats.total %}
+                    <span>Showing {{ jobs_stats.start_index }} – {{ jobs_stats.end_index }}</span>
+                    {% endif %}
+                </div>
+
+                {% if jobs %}
+                <div class="table-wrapper">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Title</th>
+                                <th>Status</th>
+                                <th>Created</th>
+                                <th>Published</th>
+                                <th>Applications</th>
+                                <th>Public Link</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for job in jobs %}
+                            <tr>
+                                <td>
+                                    <strong>{{ job.title }}</strong>
+                                </td>
+                                <td>
+                                    <span class="status-badge status-{{ job.status }}">{{ job.status.capitalize() }}</span>
+                                </td>
+                                <td>{{ job.created_at.strftime('%b %d, %Y') if job.created_at else '—' }}</td>
+                                <td>{{ job.published_at.strftime('%b %d, %Y') if job.published_at else '—' }}</td>
+                                <td>{{ job.application_count }}</td>
+                                <td>
+                                    {% if organization.slug and job.public_url_slug and job.status == 'published' %}
+                                    <a href="{{ url_for('public.job_detail', org_slug=organization.slug, job_slug=job.public_url_slug) }}" target="_blank" rel="noopener">Open</a>
+                                    {% else %}
+                                    <span style="color: var(--text-secondary);">—</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+
+                {% if jobs_pagination.pages > 1 %}
+                <nav class="pagination-nav" aria-label="Jobs pagination">
+                    <ul class="pagination-list">
+                        <li>
+                            <a class="pagination-link {{ 'is-disabled' if not jobs_pagination.has_prev else '' }}" href="{{ url_for('super_admin.organization_jobs', org_id=organization.id, page=jobs_pagination.prev_num) if jobs_pagination.has_prev else '#' }}">Prev</a>
+                        </li>
+                        {% for p in range(1, jobs_pagination.pages + 1) %}
+                        <li>
+                            <a class="pagination-link {{ 'is-active' if p == jobs_pagination.page else '' }}" href="{{ url_for('super_admin.organization_jobs', org_id=organization.id, page=p) }}">{{ p }}</a>
+                        </li>
+                        {% endfor %}
+                        <li>
+                            <a class="pagination-link {{ 'is-disabled' if not jobs_pagination.has_next else '' }}" href="{{ url_for('super_admin.organization_jobs', org_id=organization.id, page=jobs_pagination.next_num) if jobs_pagination.has_next else '#' }}">Next</a>
+                        </li>
+                    </ul>
+                </nav>
+                {% endif %}
+                {% else %}
+                <div class="table-wrapper empty-state">
+                    <p>No jobs found for this organization.</p>
+                </div>
+                {% endif %}
+            </section>
+        </div>
+    </div>
+</div>
+{% endblock %}
+

@@ -4,149 +4,665 @@
 
 {% block extra_css %}
 <style>
-.btn-icon {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    padding: 8px;
-    border: none;
-    background: none;
-    cursor: pointer;
-    border-radius: 4px;
-    transition: all 0.2s ease;
-    text-decoration: none;
-    height: 34px;
-    width: 34px;
-}
+    .dashboard-shell {
+        min-height: calc(100vh - 140px);
+        padding: var(--spacing-10) 0;
+        background: radial-gradient(circle at top left, rgba(105, 108, 255, 0.18), rgba(15, 23, 42, 0)) no-repeat;
+    }
 
-.btn-edit {
-    color: var(--secondary, #6c757d);
-}
+    .dashboard-card {
+        background: linear-gradient(145deg, rgba(255, 255, 255, 0.82), rgba(255, 255, 255, 0.96));
+        border-radius: var(--border-radius-2xl, 28px);
+        box-shadow: 0 30px 60px rgba(15, 23, 42, 0.12);
+        padding: clamp(var(--spacing-6), 3vw, var(--spacing-8));
+        border: 1px solid rgba(148, 163, 184, 0.18);
+        backdrop-filter: blur(12px);
+    }
 
-.btn-edit:hover {
-    background-color: rgba(108, 117, 125, 0.1);
-    color: var(--secondary-dark, #5a6268);
-}
+    .page-header {
+        display: flex;
+        flex-direction: column;
+        gap: var(--spacing-6);
+        margin-bottom: clamp(var(--spacing-6), 3vw, var(--spacing-8));
+    }
 
-.btn-edit svg {
-    transition: transform 0.2s ease;
-}
+    .page-header-content {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: var(--spacing-6);
+    }
 
-.btn-edit:hover svg {
-    transform: scale(1.1);
-}
+    .page-title {
+        margin: 0;
+        font-size: clamp(2rem, 2.6vw, 2.8rem);
+        font-weight: var(--font-weight-semibold);
+        letter-spacing: -0.02em;
+    }
 
-.btn-invite {
-    color: var(--primary);
-}
+    .page-subtitle {
+        margin: var(--spacing-2) 0 0;
+        color: var(--text-secondary);
+        font-size: 1rem;
+    }
 
-.btn-invite:hover {
-    background-color: rgba(105, 108, 255, 0.1);
-    color: var(--primary-dark);
-}
+    .page-actions {
+        display: inline-flex;
+        flex-wrap: wrap;
+        gap: var(--spacing-3);
+    }
 
-.btn-invite svg {
-    transition: transform 0.2s ease;
-}
+    .page-actions .btn {
+        border-radius: var(--border-radius-lg, 14px);
+        padding: var(--spacing-3) var(--spacing-5);
+        font-weight: var(--font-weight-medium);
+        box-shadow: none;
+        border: none;
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
 
-.btn-invite:hover svg {
-    transform: scale(1.1);
-}
+    .page-actions .btn-primary {
+        background: linear-gradient(135deg, var(--primary), #3a3fff);
+        box-shadow: 0 18px 36px rgba(105, 108, 255, 0.22);
+    }
+
+    .page-actions .btn-secondary {
+        background: rgba(105, 108, 255, 0.08);
+        color: var(--primary-dark, #4c4ff7);
+        border: 1px solid rgba(105, 108, 255, 0.18);
+    }
+
+    .page-actions .btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 20px 40px rgba(105, 108, 255, 0.25);
+    }
+
+    .metric-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: var(--spacing-3);
+    }
+
+    .metric-card {
+        position: relative;
+        padding: var(--spacing-4);
+        border-radius: var(--border-radius-lg, 20px);
+        background: white;
+        border: 1px solid rgba(148, 163, 184, 0.16);
+        box-shadow: 0 16px 32px rgba(15, 23, 42, 0.08);
+        overflow: hidden;
+    }
+
+    .metric-card::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(135deg, rgba(105, 108, 255, 0.12), rgba(111, 209, 255, 0.08));
+        opacity: 0;
+        transition: opacity 0.2s ease;
+    }
+
+    .metric-card:hover::after {
+        opacity: 1;
+    }
+
+    .metric-label {
+        display: flex;
+        align-items: center;
+        gap: var(--spacing-2);
+        text-transform: uppercase;
+        letter-spacing: 0.16em;
+        font-size: 0.68rem;
+        color: var(--text-secondary);
+        margin-bottom: var(--spacing-2);
+    }
+
+    .metric-value {
+        font-size: clamp(1.6rem, 2vw, 2.1rem);
+        font-weight: var(--font-weight-semibold);
+        color: var(--text-heading);
+        margin: 0;
+    }
+
+    .metric-value.metric-value-storage {
+        display: grid;
+        gap: var(--spacing-1);
+        font-size: 1.05rem;
+        line-height: 1.3;
+    }
+
+    .metric-value-storage span {
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+        font-size: 0.95rem;
+        color: var(--primary-dark, #4c4ff7);
+        font-weight: var(--font-weight-medium);
+    }
+
+    .metric-value-storage span small {
+        font-size: 0.72rem;
+        text-transform: uppercase;
+        letter-spacing: 0.16em;
+        color: var(--text-secondary);
+    }
+
+    .table-container {
+        margin-top: clamp(var(--spacing-6), 4vw, var(--spacing-8));
+    }
+
+    .table-title {
+        font-size: 1.35rem;
+        font-weight: var(--font-weight-semibold);
+        margin: 0;
+        color: var(--text-heading);
+    }
+
+    .table-toolbar {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: var(--spacing-3);
+        margin-bottom: var(--spacing-4);
+    }
+
+    .table-toolbar-actions {
+        display: inline-flex;
+        align-items: center;
+        gap: var(--spacing-2);
+        flex-wrap: wrap;
+    }
+
+    .search-form {
+        display: inline-flex;
+        align-items: center;
+        gap: var(--spacing-2);
+    }
+
+    .search-input {
+        position: relative;
+        display: flex;
+        align-items: center;
+    }
+
+    .search-input input {
+        padding: 0.65rem 1rem;
+        border-radius: var(--border-radius-lg, 14px);
+        border: 1px solid rgba(148, 163, 184, 0.35);
+        min-width: 240px;
+        background: rgba(248, 250, 252, 0.95);
+        transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .search-input input:focus {
+        outline: none;
+        border-color: var(--primary);
+        box-shadow: 0 0 0 3px rgba(105, 108, 255, 0.12);
+        background: white;
+    }
+
+    .search-input button {
+        margin-left: var(--spacing-2);
+        padding: 0.45rem 1.2rem;
+        border-radius: var(--border-radius-lg, 14px);
+        border: none;
+        background: linear-gradient(135deg, var(--primary), #3a3fff);
+        color: white;
+        font-weight: var(--font-weight-medium);
+        cursor: pointer;
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .search-input button:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 14px 24px rgba(105, 108, 255, 0.24);
+    }
+
+    .search-clear {
+        font-size: 0.85rem;
+        color: var(--text-secondary);
+        text-decoration: none;
+    }
+
+    .search-clear:hover {
+        color: var(--primary);
+        text-decoration: underline;
+    }
+
+    .table-wrapper {
+        border-radius: var(--border-radius-xl, 22px);
+        overflow: hidden;
+        border: 1px solid rgba(148, 163, 184, 0.18);
+        background: white;
+        box-shadow: 0 28px 52px rgba(15, 23, 42, 0.1);
+    }
+
+    .table {
+        width: 100%;
+        border-collapse: separate;
+        border-spacing: 0;
+    }
+
+    .table thead {
+        background: rgba(105, 108, 255, 0.08);
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        font-size: 0.75rem;
+        color: var(--text-secondary);
+    }
+
+    .table th,
+    .table td {
+        padding: var(--spacing-4);
+        border-bottom: 1px solid rgba(226, 232, 240, 0.7);
+        text-align: left;
+        vertical-align: middle;
+    }
+
+    .table tbody tr:hover {
+        background: rgba(105, 108, 255, 0.03);
+    }
+
+    .sortable {
+        display: inline-flex;
+        align-items: center;
+        gap: var(--spacing-1);
+        font-weight: var(--font-weight-semibold);
+        color: inherit;
+        text-decoration: none;
+        transition: color 0.2s ease;
+    }
+
+    .sortable:hover {
+        color: var(--primary);
+    }
+
+    .sortable .sort-indicator {
+        font-size: 0.75rem;
+        opacity: 0.5;
+    }
+
+    .sortable.is-active .sort-indicator {
+        opacity: 1;
+        color: var(--primary);
+    }
+
+    .status-badge {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0.35rem 0.75rem;
+        border-radius: 999px;
+        font-size: 0.75rem;
+        font-weight: var(--font-weight-medium);
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+    }
+
+    .status-active {
+        background: rgba(34, 197, 94, 0.12);
+        color: #15803d;
+        border: 1px solid rgba(34, 197, 94, 0.28);
+    }
+
+    .status-inactive {
+        background: rgba(248, 113, 113, 0.16);
+        color: #b91c1c;
+        border: 1px solid rgba(248, 113, 113, 0.28);
+    }
+
+    .action-group {
+        display: flex;
+        gap: var(--spacing-2);
+        flex-wrap: wrap;
+        align-items: center;
+    }
+
+    .btn-icon {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 8px;
+        border: none;
+        background: rgba(105, 108, 255, 0.08);
+        cursor: pointer;
+        border-radius: 50%;
+        transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+        text-decoration: none;
+        height: 38px;
+        width: 38px;
+        color: var(--text-heading);
+        border: 1px solid transparent;
+    }
+
+    .btn-icon:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 12px 28px rgba(15, 23, 42, 0.14);
+        background: white;
+        border-color: rgba(148, 163, 184, 0.24);
+    }
+
+    .btn-icon img {
+        width: 25px;
+        height: 25px;
+        display: block;
+    }
+
+    .btn-edit {
+        color: var(--primary);
+    }
+
+    .btn-invite {
+        color: #0284c7;
+    }
+
+    .btn-link {
+        color: #0f172a;
+        background: rgba(14, 165, 233, 0.08);
+    }
+
+    .btn-link:hover {
+        border-color: rgba(14, 165, 233, 0.32);
+        color: #0369a1;
+    }
+
+    .btn-icon svg {
+        transition: transform 0.2s ease;
+    }
+
+    .btn-icon:hover svg {
+        transform: scale(1.1);
+    }
+
+    .btn-sm {
+        border-radius: var(--border-radius-md, 12px);
+        padding: 0.45rem 1rem;
+        font-size: 0.82rem;
+        font-weight: var(--font-weight-semibold);
+        letter-spacing: 0.02em;
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .btn-sm:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 14px 28px rgba(105, 108, 255, 0.22);
+    }
+
+    .table-empty {
+        padding: var(--spacing-8);
+        text-align: center;
+        color: var(--text-secondary);
+    }
+
+    .pagination-nav {
+        display: flex;
+        justify-content: flex-end;
+        margin-top: var(--spacing-4);
+    }
+
+    .pagination-list {
+        display: inline-flex;
+        align-items: center;
+        gap: var(--spacing-2);
+        list-style: none;
+        padding: 0;
+        margin: 0;
+    }
+
+    .pagination-link {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 36px;
+        height: 36px;
+        padding: 0 var(--spacing-2);
+        border-radius: var(--border-radius-md, 12px);
+        border: 1px solid rgba(148, 163, 184, 0.35);
+        background: rgba(255, 255, 255, 0.9);
+        color: var(--text-body);
+        font-size: 0.85rem;
+        font-weight: var(--font-weight-medium);
+        text-decoration: none;
+        transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+    }
+
+    .pagination-link:hover {
+        background: rgba(105, 108, 255, 0.1);
+        border-color: rgba(105, 108, 255, 0.25);
+        transform: translateY(-1px);
+        box-shadow: 0 12px 24px rgba(105, 108, 255, 0.18);
+    }
+
+    .pagination-link.is-active {
+        background: linear-gradient(135deg, var(--primary), #3a3fff);
+        color: white;
+        border: none;
+        box-shadow: 0 18px 36px rgba(105, 108, 255, 0.24);
+    }
+
+    .pagination-link.is-disabled {
+        pointer-events: none;
+        opacity: 0.45;
+        box-shadow: none;
+        transform: none;
+    }
+
+    @media (max-width: 1024px) {
+        .table th,
+        .table td {
+            padding: var(--spacing-3);
+        }
+
+        .page-actions .btn {
+            width: 100%;
+            justify-content: center;
+        }
+    }
+
+    @media (max-width: 768px) {
+        .dashboard-card {
+            padding: var(--spacing-5);
+        }
+
+        .table {
+            display: block;
+            overflow-x: auto;
+            white-space: nowrap;
+        }
+
+        .metric-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .search-input input {
+            min-width: 200px;
+        }
+    }
 </style>
 {% endblock %}
 
+{% macro sort_link(column_key, label) %}
+    {% set is_active = sort_by == column_key %}
+    {% set next_direction = 'desc' if is_active and sort_direction == 'asc' else 'asc' %}
+    <a class="sortable {{ 'is-active' if is_active else '' }}" href="{{ url_for('super_admin.dashboard', sort=column_key, direction=next_direction, search=search, page=1) }}">
+        {{ label }}
+        <span class="sort-indicator">
+            {% if is_active %}
+                {{ '↑' if sort_direction == 'asc' else '↓' }}
+            {% else %}
+                ↕
+            {% endif %}
+        </span>
+    </a>
+{% endmacro %}
+
 {% block content %}
-<div class="container" style="padding-top: var(--spacing-8); padding-bottom: var(--spacing-8);">
-    <div class="page-header">
-        <div class="page-header-content">
-            <div>
-                <h1 class="page-title">Super Admin Dashboard</h1>
-                <p class="page-subtitle">Manage organizations and system settings</p>
+<div class="dashboard-shell">
+    <div class="container">
+        <div class="dashboard-card">
+            <div class="page-header">
+                <div class="page-header-content">
+                    <div>
+                        <h1 class="page-title">Super Admin Dashboard</h1>
+                        <p class="page-subtitle">Manage organizations, prompts, and access with confidence.</p>
+                    </div>
+                    <div class="page-actions">
+                        <a href="{{ url_for('super_admin.ai_prompts') }}" class="btn btn-secondary">🤖 AI Prompts</a>
+                        <a href="{{ url_for('super_admin.change_password') }}" class="btn btn-secondary">Change Password</a>
+                        <a href="{{ url_for('super_admin.add_organization') }}" class="btn btn-primary">+ Add Organization</a>
+                        <a href="{{ url_for('auth.logout') }}" class="btn btn-secondary">Logout</a>
+                    </div>
+                </div>
+
+                <div class="metric-grid">
+                    <div class="metric-card">
+                        <div class="metric-label">Organizations</div>
+                        <p class="metric-value">{{ summary.organizations }}</p>
+                        <span class="metric-trend">{{ summary.active_orgs }} active • {{ summary.inactive_orgs }} inactive</span>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-label">Open Positions</div>
+                        <p class="metric-value">{{ summary.total_jobs }}</p>
+                        <span class="metric-trend">Across all organizations</span>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-label">Candidates</div>
+                        <p class="metric-value">{{ summary.total_candidates }}</p>
+                        <span class="metric-trend">Interview-ready talent</span>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-label">Storage</div>
+                        <p class="metric-value metric-value-storage">
+                            <span>
+                                <small>CV Storage</small>
+                                {{ summary.cv_storage }}
+                            </span>
+                            <span>
+                                <small>Audio Storage</small>
+                                {{ summary.audio_storage }}
+                            </span>
+                        </p>
+                        <span class="metric-trend">Resource utilisation</span>
+                    </div>
+                </div>
             </div>
-            <div class="page-actions">
-                <a href="{{ url_for('super_admin.ai_prompts') }}" class="btn btn-secondary">🤖 AI Prompts</a>
-                <a href="{{ url_for('super_admin.change_password') }}" class="btn btn-secondary">Change Password</a>
-                <a href="{{ url_for('super_admin.add_organization') }}" class="btn btn-primary">+ Add Organization</a>
-                <a href="{{ url_for('auth.logout') }}" class="btn btn-secondary">Logout</a>
-            </div>
+
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ category }}">{{ message }}</div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+
+            <section class="table-container">
+                <div class="table-toolbar">
+                    <h2 class="table-title">Organizations</h2>
+                    <div class="table-toolbar-actions">
+                        <form method="get" class="search-form">
+                            <div class="search-input">
+                                <input type="text" name="search" value="{{ search }}" placeholder="Search by name, email, or contact person">
+                                <input type="hidden" name="sort" value="{{ sort_by }}">
+                                <input type="hidden" name="direction" value="{{ sort_direction }}">
+                                <input type="hidden" name="page" value="1">
+                                <button type="submit">Search</button>
+                            </div>
+                        </form>
+                        {% if search %}
+                        <a class="search-clear" href="{{ url_for('super_admin.dashboard', sort=sort_by, direction=sort_direction) }}">Clear</a>
+                        {% endif %}
+                    </div>
+                </div>
+
+                {% if org_stats %}
+                <div class="table-wrapper">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>{{ sort_link('name', 'Name') }}</th>
+                                <th>{{ sort_link('email', 'Email') }}</th>
+                                <th>{{ sort_link('contact', 'Contact Person') }}</th>
+                                <th>{{ sort_link('jobs', 'Total Jobs') }}</th>
+                                <th>{{ sort_link('candidates', 'Total Candidates') }}</th>
+                                <th>{{ sort_link('cv_storage', 'CV Storage') }}</th>
+                                <th>{{ sort_link('audio_storage', 'Audio Storage') }}</th>
+                                <th>{{ sort_link('status', 'Status') }}</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for stat in org_stats %}
+                            <tr>
+                                <td><strong>{{ stat.organization.name }}</strong></td>
+                                <td>{{ stat.organization.email }}</td>
+                                <td>{{ [stat.organization.first_name, stat.organization.last_name]|select|join(' ') }}</td>
+                                <td>{{ stat.total_jobs }}</td>
+                                <td>{{ stat.total_candidates }}</td>
+                                <td>{{ stat.cv_total_size }}</td>
+                                <td>{{ stat.audio_total_size }}</td>
+                                <td>
+                                    <span class="status-badge status-{{ stat.organization.status }}">
+                                        {{ stat.organization.status.capitalize() }}
+                                    </span>
+                                </td>
+                                <td>
+                                    <div class="action-group">
+                                        <a href="{{ url_for('super_admin.edit_organization', org_id=stat.organization.id) }}" class="btn-icon btn-edit" title="Edit Organization">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                                                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                                            </svg>
+                                        </a>
+                                        <form method="POST" action="{{ url_for('super_admin.send_invite', org_id=stat.organization.id) }}" style="display: inline;">
+                                            <button type="submit" class="btn-icon btn-invite" title="Send Invite">
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                                    <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
+                                                    <polyline points="22,6 12,13 2,6"></polyline>
+                                                </svg>
+                                            </button>
+                                        </form>
+                                        <a href="{{ url_for('super_admin.organization_jobs', org_id=stat.organization.id) }}" class="btn-icon btn-link" title="View Jobs" aria-label="View jobs for {{ stat.organization.name }}" target="_blank" rel="noopener">
+                                            <img src="{{ url_for('static', filename='uploads/logos/icons8-url-50.png') }}" alt="View jobs" width="18" height="18" loading="lazy">
+                                        </a>
+                                        <a href="{{ url_for('super_admin.toggle_organization_status', org_id=stat.organization.id) }}"
+                                           class="btn btn-sm {{ 'btn-success' if stat.organization.status == 'inactive' else 'btn-warning' }}"
+                                           onclick="return confirm('Are you sure?')">
+                                            {{ 'Activate' if stat.organization.status == 'inactive' else 'Deactivate' }}
+                                        </a>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="table-wrapper table-empty">
+                    <p class="text-muted">No organizations found. <a href="{{ url_for('super_admin.add_organization') }}">Add your first organization</a></p>
+                </div>
+                {% endif %}
+
+                {% if pagination.total_pages > 1 %}
+                <nav class="pagination-nav" aria-label="Organizations pagination">
+                    <ul class="pagination-list">
+                        <li>
+                            <a class="pagination-link {{ 'is-disabled' if not pagination.has_prev else '' }}" href="{{ url_for('super_admin.dashboard', page=pagination.page - 1, sort=sort_by, direction=sort_direction, search=search) if pagination.has_prev else '#' }}">Prev</a>
+                        </li>
+                        {% for p in range(1, pagination.total_pages + 1) %}
+                        <li>
+                            <a class="pagination-link {{ 'is-active' if p == pagination.page else '' }}" href="{{ url_for('super_admin.dashboard', page=p, sort=sort_by, direction=sort_direction, search=search) }}">{{ p }}</a>
+                        </li>
+                        {% endfor %}
+                        <li>
+                            <a class="pagination-link {{ 'is-disabled' if not pagination.has_next else '' }}" href="{{ url_for('super_admin.dashboard', page=pagination.page + 1, sort=sort_by, direction=sort_direction, search=search) if pagination.has_next else '#' }}">Next</a>
+                        </li>
+                    </ul>
+                </nav>
+                {% endif %}
+            </section>
         </div>
-    </div>
-    
-    {% with messages = get_flashed_messages(with_categories=true) %}
-        {% if messages %}
-            {% for category, message in messages %}
-                <div class="alert alert-{{ category }}">{{ message }}</div>
-            {% endfor %}
-        {% endif %}
-    {% endwith %}
-    
-    <div class="table-container">
-        <div class="table-header">
-            <h2 class="table-title">Organizations</h2>
-        </div>
-        
-        {% if org_stats %}
-        <table class="table">
-            <thead>
-                <tr>
-                    <th>Name</th>
-                    <th>Email</th>
-                    <th>Contact Person</th>
-                    <th>Total Jobs</th>
-                    <th>Total Candidates</th>
-                    <th>CV Storage</th>
-                    <th>Audio Storage</th>
-                    <th>Status</th>
-                    <th>Actions</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for stat in org_stats %}
-                <tr>
-                    <td><strong>{{ stat.organization.name }}</strong></td>
-                    <td>{{ stat.organization.email }}</td>
-                    <td>{{ stat.organization.first_name }} {{ stat.organization.last_name }}</td>
-                    <td>{{ stat.total_jobs }}</td>
-                    <td>{{ stat.total_candidates }}</td>
-                    <td>{{ stat.cv_total_size }}</td>
-                    <td>{{ stat.audio_total_size }}</td>
-                    <td>
-                        <span class="status-badge status-{{ stat.organization.status }}">
-                            {{ stat.organization.status.capitalize() }}
-                        </span>
-                    </td>
-                    <td>
-                        <div style="display: flex; gap: var(--spacing-2); flex-wrap: wrap; align-items: center;">
-                            <a href="{{ url_for('super_admin.edit_organization', org_id=stat.organization.id) }}" class="btn-icon btn-edit" title="Edit Organization">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
-                                    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
-                                </svg>
-                            </a>
-                            <form method="POST" action="{{ url_for('super_admin.send_invite', org_id=stat.organization.id) }}" style="display: inline;">
-                                <button type="submit" class="btn-icon btn-invite" title="Send Invite">
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                        <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
-                                        <polyline points="22,6 12,13 2,6"></polyline>
-                                    </svg>
-                                </button>
-                            </form>
-                            <a href="{{ url_for('super_admin.toggle_organization_status', org_id=stat.organization.id) }}" 
-                               class="btn btn-sm {{ 'btn-success' if stat.organization.status == 'inactive' else 'btn-warning' }}" 
-                               onclick="return confirm('Are you sure?')">
-                                {{ 'Activate' if stat.organization.status == 'inactive' else 'Deactivate' }}
-                            </a>
-                        </div>
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-        {% else %}
-        <div class="text-center" style="padding: var(--spacing-8);">
-            <p class="text-muted">No organizations found. <a href="{{ url_for('super_admin.add_organization') }}">Add your first organization</a></p>
-        </div>
-        {% endif %}
     </div>
 </div>
 {% endblock %}

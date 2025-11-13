@@ -1,0 +1,5 @@
+---
+alwaysApply: true
+---
+Do not drop database tables while running any scripts. Just updated them with new columns
+Do not remove any records from database while running any scripts
